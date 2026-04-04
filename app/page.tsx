@@ -111,9 +111,16 @@ export default function App() {
   if (!joined) return (
     <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f7f9fc_42%,_#edf2f7_100%)] px-6">
       <div className="w-full max-w-[380px] rounded-[2.15rem] border border-white/80 bg-white/95 px-10 py-11 shadow-[0_28px_70px_rgba(15,23,42,0.16)] backdrop-blur">
-        <h1 className="mb-10 text-center text-[2.05rem] font-black uppercase tracking-[-0.06em] text-black">
+        <h1 className="text-center text-[2.05rem] font-black uppercase tracking-[-0.06em] text-black">
           Planning Poker
         </h1>
+        <div className="mb-10 mt-4 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 shadow-sm">
+          <img
+            src="/planning.png"
+            alt="Team planning around a board"
+            className="h-auto w-full object-cover"
+          />
+        </div>
 
         <input
           value={userName}
