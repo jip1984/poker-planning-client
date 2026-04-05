@@ -84,7 +84,7 @@ function PokerPlanningPage() {
   const host = room?.users.find((user) => user.role === 'host');
   const participants = room?.users.filter((user) => user.role !== 'host') ?? [];
   const canEnterRoom = userName.trim().length > 0;
-  const canVote = Boolean(room?.ticket.trim());
+  const canVote = Boolean(room?.ticket.trim()) && !room?.revealed;
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
     if (!nextRoomId || !userName.trim()) return;
@@ -130,18 +130,18 @@ function PokerPlanningPage() {
           />
         </div>
 
+        {isInviteJoin && (
+          <div className="mb-4 rounded-[1.15rem] border border-slate-200 bg-white px-5 py-4 text-center text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Room {roomIdFromUrl}
+          </div>
+        )}
+
         <input
           value={userName}
           onChange={e => setUserName(e.target.value)}
           placeholder="Name"
-          className="mb-4 h-14 w-full rounded-[1.15rem] border border-slate-200 bg-slate-50/60 px-5 text-base font-medium text-slate-700 outline-none transition placeholder:text-slate-200 focus:border-slate-300"
+          className="mb-8 h-14 w-full rounded-[1.15rem] border border-slate-200 bg-slate-50/60 px-5 text-base font-medium text-slate-700 outline-none transition placeholder:text-slate-200 focus:border-slate-300"
         />
-
-        {isInviteJoin && (
-          <div className="mb-8 rounded-[1.15rem] border border-slate-200 bg-white px-5 py-4 text-center text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
-            Room {roomIdFromUrl}
-          </div>
-        )}
 
         <button
           type="button"
@@ -207,14 +207,13 @@ function PokerPlanningPage() {
         )}
 
         {room?.revealed && (
-          <div className="mt-20 flex flex-col items-center gap-6">
+          <div className="mt-12 flex items-center justify-center">
             <div
               style={{ backgroundColor: getAverageCardColor(room) }}
               className="flex h-44 w-32 items-center justify-center rounded-[2rem] text-5xl font-black text-white shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
             >
               {calculateAvg(room)}
             </div>
-            <p className="text-4xl font-black text-black">Average: {calculateAvg(room)}</p>
           </div>
         )}
       </main>
