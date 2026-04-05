@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Check, Clock3 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
@@ -13,6 +13,14 @@ const SCORE_VALUES = [1, 3, 5, 8, 13];
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL ?? 'http://localhost:4000';
 
 export default function App() {
+  return (
+    <Suspense fallback={null}>
+      <PokerPlanningPage />
+    </Suspense>
+  );
+}
+
+function PokerPlanningPage() {
   const searchParams = useSearchParams();
   const socketRef = useRef<Socket | null>(null);
   const activeRoomIdRef = useRef('');
