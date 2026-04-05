@@ -30,7 +30,6 @@ function PokerPlanningPage() {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [socketId, setSocketId] = useState('');
   const [userName, setUserName] = useState('');
-  const [isHost, setIsHost] = useState(!isInviteJoin);
   const [roomId, setRoomId] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const activeRoomId = roomId || roomIdFromUrl;
@@ -84,7 +83,8 @@ function PokerPlanningPage() {
   const me = room?.users.find(u => u.id === socketId);
   const host = room?.users.find((user) => user.role === 'host');
   const participants = room?.users.filter((user) => user.role !== 'host') ?? [];
-  const canEnterRoom = userName.trim().length > 0 && (isHost || isInviteJoin);
+  const canEnterRoom = userName.trim().length > 0;
+  const canVote = Boolean(room?.ticket.trim());
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
     if (!nextRoomId || !userName.trim()) return;
@@ -106,7 +106,7 @@ function PokerPlanningPage() {
     const socket = socketRef.current;
     if (!socket) return;
 
-    if (isHost) {
+    if (!isInviteJoin) {
       socket.emit('create_room', (nextRoomId: string) => {
         joinRoom(nextRoomId, 'host');
       });
@@ -122,11 +122,11 @@ function PokerPlanningPage() {
         <h1 className="text-center text-[2.05rem] font-black uppercase tracking-[-0.06em] text-black">
           Planning Poker
         </h1>
-        <div className="mb-10 mt-4 overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 shadow-sm">
+        <div className="mb-4 mt-1 flex justify-center">
           <img
-            src="/planning.png"
-            alt="Team planning around a board"
-            className="h-auto w-full object-cover"
+            src="/playing-cards.png"
+            alt="Planning poker cards"
+            className="h-auto w-full max-w-[240px]"
           />
         </div>
 
@@ -136,20 +136,6 @@ function PokerPlanningPage() {
           placeholder="Name"
           className="mb-4 h-14 w-full rounded-[1.15rem] border border-slate-200 bg-slate-50/60 px-5 text-base font-medium text-slate-700 outline-none transition placeholder:text-slate-200 focus:border-slate-300"
         />
-
-        {!isInviteJoin && (
-          <button
-            type="button"
-            onClick={() => setIsHost(!isHost)}
-            className={`mb-8 flex h-14 w-full cursor-pointer items-center justify-center rounded-[1.15rem] border px-5 text-base font-bold transition ${
-              isHost
-                ? 'border-slate-900 bg-slate-900 text-white'
-                : 'border-slate-200 bg-white text-slate-300'
-            }`}
-          >
-            Host
-          </button>
-        )}
 
         {isInviteJoin && (
           <div className="mb-8 rounded-[1.15rem] border border-slate-200 bg-white px-5 py-4 text-center text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">
@@ -163,7 +149,7 @@ function PokerPlanningPage() {
           disabled={!canEnterRoom}
           className="h-14 w-full cursor-pointer rounded-[1.15rem] bg-black text-lg font-extrabold text-white shadow-[0_12px_24px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
         >
-          {isHost ? 'Create Room' : 'Join Room'}
+          {isInviteJoin ? 'Join Room' : 'Create Room'}
         </button>
       </div>
     </div>
@@ -211,9 +197,9 @@ function PokerPlanningPage() {
         {me?.role === 'voter' && (
           <div className="flex gap-4">
             {CARDS.map(val => (
-              <button key={val} onClick={() => socketRef.current?.emit('cast_vote', { roomId: activeRoomId, vote: val })}
+              <button key={val} disabled={!canVote} onClick={() => socketRef.current?.emit('cast_vote', { roomId: activeRoomId, vote: me.vote === val ? null : val })}
                 style={{ backgroundColor: COLORS[val] }}
-                className={`cursor-pointer w-24 h-36 rounded-3xl text-4xl font-black text-white shadow-xl transition-all hover:-translate-y-4 ${me.vote === val ? 'ring-[10px] ring-blue-400/40 scale-105' : ''}`}>
+                className={`w-24 h-36 rounded-3xl text-4xl font-black text-white shadow-xl transition-all ${canVote ? 'cursor-pointer hover:-translate-y-4' : 'cursor-not-allowed opacity-45'} ${me.vote === val ? 'ring-[10px] ring-blue-400/40 scale-105' : ''}`}>
                 {val}
               </button>
             ))}
@@ -233,8 +219,8 @@ function PokerPlanningPage() {
         )}
       </main>
 
-      <aside className="w-full max-w-[380px] border-l border-slate-200/80 bg-white/70 p-8 backdrop-blur">
-        <div className="sticky top-0">
+      <aside className="w-full max-w-[360px] border-l border-slate-200/80 bg-white/70 p-6 backdrop-blur">
+        <div className="sticky top-0 max-h-screen overflow-y-auto pr-1">
           <p className="mb-6 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
             Participants ({room?.users.length ?? 0})
           </p>
@@ -243,20 +229,20 @@ function PokerPlanningPage() {
             {host && (
               <div>
                 <p className="mb-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Host</p>
-                <div className="rounded-[1.9rem] border border-slate-200 bg-white px-5 py-5 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-black uppercase text-blue-600">
+                <div className="rounded-[1.7rem] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
                       {host.name.slice(0, 1) || '?'}
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xl font-black text-slate-900">{host.name}</p>
+                      <p className="truncate text-lg font-black text-slate-900">{host.name}</p>
                       <p className="text-sm font-bold uppercase tracking-[0.12em] text-blue-500">
                         {host.id === me?.id ? 'You' : 'Host'}
                       </p>
                     </div>
 
-                    <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                    <div className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
                       Managing
                     </div>
                   </div>
@@ -278,35 +264,35 @@ function PokerPlanningPage() {
                   return (
                     <div
                       key={user.id}
-                      className="flex items-center gap-4 rounded-[1.75rem] border border-slate-200 bg-slate-50/70 px-5 py-4 shadow-sm"
+                      className="flex items-center gap-3 rounded-[1.55rem] border border-slate-200 bg-slate-50/70 px-4 py-3.5 shadow-sm"
                     >
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-lg font-black uppercase text-blue-600">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
                         {user.name.slice(0, 1) || '?'}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xl font-black text-slate-900">{user.name}</p>
-                        <p className="text-sm font-bold uppercase tracking-[0.12em] text-blue-500">
+                        <p className="truncate text-lg font-black text-slate-900">{user.name}</p>
+                        <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-500">
                           {isCurrentUser ? 'You' : 'Voter'}
                         </p>
                       </div>
 
-                      <div className="flex min-w-[96px] items-center justify-end">
+                      <div className="flex min-w-[88px] items-center justify-end">
                         {showVoteValue ? (
                           <div
                             style={{ backgroundColor: COLORS[String(user.vote)] }}
-                            className="flex h-16 w-12 items-center justify-center rounded-2xl text-2xl font-black text-white shadow-lg"
+                            className="flex h-14 w-11 items-center justify-center rounded-2xl text-xl font-black text-white shadow-lg"
                           >
                             {user.vote}
                           </div>
                         ) : hasVoted ? (
-                          <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-600">
-                            <Check size={16} strokeWidth={3} />
+                          <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-600">
+                            <Check size={14} strokeWidth={3} />
                             Voted
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-sm font-black text-amber-600">
-                            <Clock3 size={16} strokeWidth={2.5} />
+                          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-xs font-black text-amber-600">
+                            <Clock3 size={14} strokeWidth={2.5} />
                             Waiting
                           </div>
                         )}
