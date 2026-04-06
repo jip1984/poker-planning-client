@@ -123,11 +123,18 @@ function PokerPlanningPage() {
       return activeTheme === 'dark' ? 'light' : 'dark';
     });
   };
+  const formatDisplayName = (name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return '';
+
+    return trimmedName.charAt(0).toUpperCase() + trimmedName.slice(1);
+  };
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
     if (!nextRoomId || !userName.trim()) return;
     const socket = socketRef.current;
     if (!socket) return;
+    const formattedUserName = formatDisplayName(userName);
 
     setRoomId(nextRoomId);
 
@@ -136,7 +143,7 @@ function PokerPlanningPage() {
       window.history.replaceState({}, '', nextUrl);
     }
 
-    socket.emit('join_room', { roomId: nextRoomId, userName: userName.trim(), role });
+    socket.emit('join_room', { roomId: nextRoomId, userName: formattedUserName, role });
     setJoined(true);
   };
 
