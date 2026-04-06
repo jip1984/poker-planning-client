@@ -7,7 +7,7 @@ interface Props {
 
 export const TicketDisplay = ({ ticket, isHost, onUpdate, isDarkMode = false }: Props) => (
   <div className="w-full max-w-2xl text-center mb-12">
-    <label className={`text-xs font-black uppercase tracking-widest mb-3 block ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Current Ticket</label>
+    <label className={`mb-3 block text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Current Ticket</label>
     {isHost ? (
       <textarea 
         className={`w-full p-6 rounded-[2rem] border-2 text-[2rem] leading-tight font-black text-center outline-none resize-none shadow-sm focus:border-blue-400 ${isDarkMode ? 'border-slate-700 bg-slate-900 text-white placeholder:text-white' : 'border-slate-200 bg-white text-black placeholder:text-slate-300'}`}

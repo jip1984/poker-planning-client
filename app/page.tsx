@@ -33,8 +33,10 @@ function PokerPlanningPage() {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [socketId, setSocketId] = useState('');
   const [userName, setUserName] = useState('');
+  const [jobRole, setJobRole] = useState('');
   const [roomId, setRoomId] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
+  const [joinError, setJoinError] = useState('');
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
   const activeRoomId = roomId || roomIdFromUrl;
@@ -76,7 +78,12 @@ function PokerPlanningPage() {
   const attachSocketListeners = useCallback((socket: Socket) => {
     socket.on('connect', () => setSocketId(socket.id ?? ''));
     socket.on('disconnect', () => setSocketId(''));
-    socket.on('update_state', setRoom);
+    socket.on('update_state', (nextRoom) => {
+      setRoom(nextRoom);
+      setJoinError('');
+      setJoined(true);
+    });
+    socket.on('join_error', (message: string) => setJoinError(message));
   }, []);
 
   const createConnectedSocket = useCallback(() => {
@@ -100,6 +107,7 @@ function PokerPlanningPage() {
       socket?.off('connect');
       socket?.off('disconnect');
       socket?.off('update_state');
+      socket?.off('join_error');
       socket?.disconnect();
       socketRef.current = null;
     };
@@ -129,12 +137,20 @@ function PokerPlanningPage() {
 
     return trimmedName.charAt(0).toUpperCase() + trimmedName.slice(1);
   };
+  const formatJobRole = (roleName: string) => {
+    const trimmedRole = roleName.trim();
+    if (!trimmedRole) return '';
+
+    return trimmedRole.charAt(0).toUpperCase() + trimmedRole.slice(1);
+  };
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
     if (!nextRoomId || !userName.trim()) return;
     const socket = socketRef.current;
     if (!socket) return;
     const formattedUserName = formatDisplayName(userName);
+    const formattedJobRole = formatJobRole(jobRole);
+    setJoinError('');
 
     setRoomId(nextRoomId);
 
@@ -143,8 +159,7 @@ function PokerPlanningPage() {
       window.history.replaceState({}, '', nextUrl);
     }
 
-    socket.emit('join_room', { roomId: nextRoomId, userName: formattedUserName, role });
-    setJoined(true);
+    socket.emit('join_room', { roomId: nextRoomId, userName: formattedUserName, role, jobRole: formattedJobRole });
   };
 
   const handleEnterRoom = () => {
@@ -191,10 +206,31 @@ function PokerPlanningPage() {
 
         <input
           value={userName}
-          onChange={e => setUserName(e.target.value)}
+          onChange={e => {
+            setUserName(e.target.value);
+            if (joinError) setJoinError('');
+          }}
           placeholder="Please enter your name"
-          className={`mb-8 h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
+          className={`mb-4 h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
         />
+
+        {isInviteJoin && (
+          <input
+            value={jobRole}
+            onChange={e => {
+              setJobRole(e.target.value);
+              if (joinError) setJoinError('');
+            }}
+            placeholder="Role optional (e.g. developer, tester, etc.)"
+            className={`mb-8 h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
+          />
+        )}
+
+        {joinError && (
+          <p className="mb-4 text-center text-sm font-semibold text-rose-500">
+            {joinError}
+          </p>
+        )}
 
         <button
           type="button"
@@ -216,8 +252,8 @@ function PokerPlanningPage() {
             <h2 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-700'}`}>Planning Poker</h2>
             {me?.role === 'host' && inviteLink && (
               <div className={`mt-4 flex max-w-2xl flex-wrap items-center gap-3 rounded-2xl px-4 py-3 shadow-sm ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
-                <span className={`text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Invite Link</span>
-                <p className={`min-w-0 flex-1 truncate text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-600'}`}>{inviteLink}</p>
+                <span className={`text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Invite Link</span>
+                <p className={`min-w-0 flex-1 truncate text-sm font-medium ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{inviteLink}</p>
                 <button
                   type="button"
                   onClick={async () => {
@@ -285,7 +321,7 @@ function PokerPlanningPage() {
       <aside className={`w-full max-w-[360px] p-6 backdrop-blur ${isDarkMode ? 'border-l border-slate-800 bg-slate-900/80' : 'border-l border-slate-200/80 bg-white/70'}`}>
         <div className="sticky top-0 max-h-screen overflow-y-auto pr-1">
           <div className="mb-6 flex items-center justify-between">
-            <p className={`text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className={`text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
               Participants ({room?.users.length ?? 0})
             </p>
             <button
@@ -301,7 +337,7 @@ function PokerPlanningPage() {
           <div className="space-y-6">
             {host && (
               <div>
-                <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Host</p>
+                <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Host</p>
                 <div className={`rounded-[1.7rem] px-4 py-4 shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-white'}`}>
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
@@ -309,13 +345,18 @@ function PokerPlanningPage() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{host.name}</p>
+                      <p
+                        title={host.name}
+                        className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
+                      >
+                        {host.name}
+                      </p>
                       <p className="text-sm font-bold uppercase tracking-[0.12em] text-blue-500">
                         {host.id === me?.id ? 'You' : 'Host'}
                       </p>
                     </div>
 
-                    <div className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                    <div className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-700'}`}>
                       Managing
                     </div>
                   </div>
@@ -324,7 +365,7 @@ function PokerPlanningPage() {
             )}
 
             <div>
-              <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+              <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
                 Voters ({participants.length})
               </p>
 
@@ -333,6 +374,7 @@ function PokerPlanningPage() {
                   const isCurrentUser = user.id === me?.id;
                   const hasVoted = user.vote !== null;
                   const showVoteValue = room?.revealed && user.vote !== null;
+                  const participantLabel = isCurrentUser ? 'YOU' : (user.jobRole || 'VOTER').toUpperCase();
 
                   return (
                     <div
@@ -344,9 +386,14 @@ function PokerPlanningPage() {
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{user.name}</p>
+                        <p
+                          title={user.name}
+                          className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
+                        >
+                          {user.name}
+                        </p>
                         <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-500">
-                          {isCurrentUser ? 'You' : 'Voter'}
+                          {participantLabel}
                         </p>
                       </div>
 
@@ -389,6 +436,14 @@ function PokerPlanningPage() {
 }
 
 function calculateAvg(room: RoomState) {
+  const submittedVotes = room.users
+    .map((u) => u.vote)
+    .filter((vote): vote is number | '?' => vote !== null);
+
+  if (submittedVotes.length > 0 && submittedVotes.every((vote) => vote === '?')) {
+    return '?';
+  }
+
   const votes = room.users
     .filter((u): u is typeof u & { vote: number } => typeof u.vote === 'number')
     .map((u) => u.vote)
@@ -409,7 +464,13 @@ function calculateAvg(room: RoomState) {
 }
 
 function getAverageCardColor(room: RoomState) {
-  const average = Number(calculateAvg(room));
+  const calculatedAverage = calculateAvg(room);
+
+  if (calculatedAverage === '?') {
+    return COLORS['?'];
+  }
+
+  const average = Number(calculatedAverage);
   const nearestCard = SCORE_VALUES.reduce((closest, current) => {
     return Math.abs(current - average) < Math.abs(closest - average) ? current : closest;
   }, SCORE_VALUES[0]);
