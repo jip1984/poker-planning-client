@@ -257,7 +257,7 @@ function PokerPlanningPage() {
             </div>
             {canVote && (
               <p className={`mt-8 text-2xl font-black tracking-[0.08em] ${isDarkMode ? 'text-slate-300' : 'text-slate-500'}`}>
-                Ready steady estimate
+                Ready, steady, estimate!
               </p>
             )}
           </div>
