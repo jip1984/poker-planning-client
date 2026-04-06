@@ -221,7 +221,7 @@ function PokerPlanningPage() {
               setJobRole(e.target.value);
               if (joinError) setJoinError('');
             }}
-            placeholder="Role optional (e.g. developer, tester, etc.)"
+            placeholder="Role optional (e.g. dev, test)"
             className={`mb-8 h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
           />
         )}
