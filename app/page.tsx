@@ -185,8 +185,8 @@ function PokerPlanningPage() {
         <input
           value={userName}
           onChange={e => setUserName(e.target.value)}
-          placeholder="Name"
-          className={`mb-8 h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-200 focus:border-slate-300'}`}
+          placeholder="Please enter your name"
+          className={`mb-8 h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
         />
 
         <button
@@ -245,14 +245,21 @@ function PokerPlanningPage() {
         />
 
         {me?.role === 'voter' && (
-          <div className="flex gap-4">
-            {CARDS.map(val => (
-              <button key={val} disabled={!canVote} onClick={() => socketRef.current?.emit('cast_vote', { roomId: activeRoomId, vote: me.vote === val ? null : val })}
-                style={{ backgroundColor: COLORS[val] }}
-                className={`w-24 h-36 rounded-3xl text-4xl font-black text-white shadow-xl transition-all ${canVote ? 'cursor-pointer hover:-translate-y-4' : 'cursor-not-allowed opacity-45'} ${me.vote === val ? 'ring-[10px] ring-blue-400/40 scale-105' : ''}`}>
-                {val}
-              </button>
-            ))}
+          <div className="flex flex-col items-center">
+            <div className="flex gap-4">
+              {CARDS.map(val => (
+                <button key={val} disabled={!canVote} onClick={() => socketRef.current?.emit('cast_vote', { roomId: activeRoomId, vote: me.vote === val ? null : val })}
+                  style={{ backgroundColor: COLORS[val] }}
+                  className={`w-24 h-36 rounded-3xl text-4xl font-black text-white shadow-xl transition-all ${canVote ? 'cursor-pointer hover:-translate-y-4' : 'cursor-not-allowed opacity-45'} ${me.vote === val ? 'ring-[10px] ring-blue-400/40 scale-105' : ''}`}>
+                  {val}
+                </button>
+              ))}
+            </div>
+            {canVote && (
+              <p className={`mt-8 text-2xl font-black tracking-[0.08em] ${isDarkMode ? 'text-slate-300' : 'text-slate-500'}`}>
+                Ready steady estimate
+              </p>
+            )}
           </div>
         )}
 
@@ -271,7 +278,7 @@ function PokerPlanningPage() {
       <aside className={`w-full max-w-[360px] p-6 backdrop-blur ${isDarkMode ? 'border-l border-slate-800 bg-slate-900/80' : 'border-l border-slate-200/80 bg-white/70'}`}>
         <div className="sticky top-0 max-h-screen overflow-y-auto pr-1">
           <div className="mb-6 flex items-center justify-between">
-            <p className={`text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className={`text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
               Participants ({room?.users.length ?? 0})
             </p>
             <button
@@ -287,7 +294,7 @@ function PokerPlanningPage() {
           <div className="space-y-6">
             {host && (
               <div>
-                <p className={`mb-3 text-[11px] font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Host</p>
+                <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>Host</p>
                 <div className={`rounded-[1.7rem] px-4 py-4 shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-white'}`}>
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
@@ -310,7 +317,7 @@ function PokerPlanningPage() {
             )}
 
             <div>
-              <p className={`mb-3 text-[11px] font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+              <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
                 Voters ({participants.length})
               </p>
 
