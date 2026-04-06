@@ -37,6 +37,10 @@ function PokerPlanningPage() {
   const [roomId, setRoomId] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [joinError, setJoinError] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('');
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
   const activeRoomId = roomId || roomIdFromUrl;
@@ -84,6 +88,11 @@ function PokerPlanningPage() {
       setJoined(true);
     });
     socket.on('join_error', (message: string) => setJoinError(message));
+    socket.on('profile_update_error', (message: string) => setProfileError(message));
+    socket.on('profile_update_success', () => {
+      setProfileError('');
+      setIsProfileModalOpen(false);
+    });
   }, []);
 
   const createConnectedSocket = useCallback(() => {
@@ -108,6 +117,8 @@ function PokerPlanningPage() {
       socket?.off('disconnect');
       socket?.off('update_state');
       socket?.off('join_error');
+      socket?.off('profile_update_error');
+      socket?.off('profile_update_success');
       socket?.disconnect();
       socketRef.current = null;
     };
@@ -142,6 +153,25 @@ function PokerPlanningPage() {
     if (!trimmedRole) return '';
 
     return trimmedRole.charAt(0).toUpperCase() + trimmedRole.slice(1);
+  };
+  const openProfileModal = (user = me) => {
+    if (!user) return;
+    setEditName(user.name);
+    setEditRole(user.jobRole);
+    setProfileError('');
+    setIsProfileModalOpen(true);
+  };
+  const handleProfileSave = () => {
+    if (!activeRoomId || !editName.trim()) {
+      setProfileError('Please enter a name.');
+      return;
+    }
+
+    socketRef.current?.emit('update_profile', {
+      roomId: activeRoomId,
+      userName: formatDisplayName(editName),
+      jobRole: formatJobRole(editRole),
+    });
   };
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
@@ -338,7 +368,11 @@ function PokerPlanningPage() {
             {host && (
               <div>
                 <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Host</p>
-                <div className={`rounded-[1.7rem] px-4 py-4 shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-white'}`}>
+                <button
+                  type="button"
+                  onClick={() => host.id === me?.id && openProfileModal(host)}
+                  className={`w-full rounded-[1.7rem] px-4 py-4 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-white'} ${host.id === me?.id ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
+                >
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
                       {host.name.slice(0, 1) || '?'}
@@ -360,7 +394,7 @@ function PokerPlanningPage() {
                       Managing
                     </div>
                   </div>
-                </div>
+                </button>
               </div>
             )}
 
@@ -377,9 +411,11 @@ function PokerPlanningPage() {
                   const participantLabel = isCurrentUser ? 'YOU' : (user.jobRole || 'VOTER').toUpperCase();
 
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={user.id}
-                      className={`flex items-center gap-3 rounded-[1.55rem] px-4 py-3.5 shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/70'}`}
+                      onClick={() => isCurrentUser && openProfileModal(user)}
+                      className={`flex w-full items-center gap-3 rounded-[1.55rem] px-4 py-3.5 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/70'} ${isCurrentUser ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
                     >
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
                         {user.name.slice(0, 1) || '?'}
@@ -417,7 +453,7 @@ function PokerPlanningPage() {
                           </div>
                         )}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -431,6 +467,68 @@ function PokerPlanningPage() {
           </div>
         </div>
       </aside>
+
+      {isProfileModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
+          <div className={`w-full max-w-md rounded-[2rem] p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
+            <div className="mb-6">
+              <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Edit Profile</h3>
+              <p className={`mt-2 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Update the name and role everyone sees in this room.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <input
+                value={editName}
+                onChange={(event) => {
+                  setEditName(event.target.value);
+                  if (profileError) setProfileError('');
+                }}
+                placeholder="Name"
+                className={`h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
+              />
+              {me?.role !== 'host' && (
+                <input
+                  value={editRole}
+                  onChange={(event) => {
+                    setEditRole(event.target.value);
+                    if (profileError) setProfileError('');
+                  }}
+                  placeholder="Role optional (e.g. dev, test)"
+                  className={`h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
+                />
+              )}
+            </div>
+
+            {profileError && (
+              <p className="mt-4 text-sm font-semibold text-rose-500">
+                {profileError}
+              </p>
+            )}
+
+            <div className="mt-8 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsProfileModalOpen(false);
+                  setProfileError('');
+                }}
+                className={`cursor-pointer rounded-xl px-5 py-3 text-sm font-black transition ${isDarkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleProfileSave}
+                className="cursor-pointer rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500"
+              >
+                Save changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
