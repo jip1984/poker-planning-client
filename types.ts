@@ -8,8 +8,15 @@ export interface User {
   vote: number | '?' | null;
 }
 
+export interface TicketHistoryEntry {
+  ticket: string;
+  score: number | '?';
+  completedAt: string;
+}
+
 export interface RoomState {
   ticket: string;
   revealed: boolean;
   users: User[];
+  history: TicketHistoryEntry[];
 }

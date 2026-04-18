@@ -1,9 +1,9 @@
 "use client";
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Check, Clock3, Moon, Sun } from 'lucide-react';
+import { Check, ChevronDown, Clock3, Moon, Sun, X } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-import { RoomState } from '@/types';
+import { RoomState, TicketHistoryEntry, User } from '@/types';
 import { HostControls } from './components/HostControls';
 import { TicketDisplay } from './components/TicketDisplay';
 
@@ -12,6 +12,7 @@ const COLORS: Record<string, string> = { 1:'#81C784', 3:'#4CAF50', 5:'#FFB74D', 
 const SCORE_VALUES = [1, 3, 5, 8, 13];
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL ?? 'http://localhost:4000';
 const THEME_STORAGE_KEY = 'planning-poker-theme';
+const MIN_NAME_LENGTH = 3;
 
 type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -37,8 +38,10 @@ function PokerPlanningPage() {
   const [roomId, setRoomId] = useState('');
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [joinError, setJoinError] = useState('');
+  const [ticketError, setTicketError] = useState('');
   const [profileError, setProfileError] = useState('');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState('');
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
@@ -58,20 +61,25 @@ function PokerPlanningPage() {
     if (typeof window === 'undefined') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const storedPreference = window.localStorage.getItem(THEME_STORAGE_KEY);
+    const animationFrame = window.requestAnimationFrame(() => {
+      const storedPreference = window.localStorage.getItem(THEME_STORAGE_KEY);
 
-    if (storedPreference === 'light' || storedPreference === 'dark' || storedPreference === 'system') {
-      setThemePreference(storedPreference);
-    }
+      if (storedPreference === 'light' || storedPreference === 'dark' || storedPreference === 'system') {
+        setThemePreference(storedPreference);
+      }
 
-    setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
+      setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
+    });
 
     const handleChange = (event: MediaQueryListEvent) => {
       setSystemTheme(event.matches ? 'dark' : 'light');
     };
 
     mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      mediaQuery.removeEventListener('change', handleChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -85,9 +93,11 @@ function PokerPlanningPage() {
     socket.on('update_state', (nextRoom) => {
       setRoom(nextRoom);
       setJoinError('');
+      setTicketError('');
       setJoined(true);
     });
     socket.on('join_error', (message: string) => setJoinError(message));
+    socket.on('ticket_update_error', (message: string) => setTicketError(message));
     socket.on('profile_update_error', (message: string) => setProfileError(message));
     socket.on('profile_update_success', () => {
       setProfileError('');
@@ -117,6 +127,7 @@ function PokerPlanningPage() {
       socket?.off('disconnect');
       socket?.off('update_state');
       socket?.off('join_error');
+      socket?.off('ticket_update_error');
       socket?.off('profile_update_error');
       socket?.off('profile_update_success');
       socket?.disconnect();
@@ -134,6 +145,11 @@ function PokerPlanningPage() {
   const me = room?.users.find(u => u.id === socketId);
   const host = room?.users.find((user) => user.role === 'host');
   const participants = room?.users.filter((user) => user.role !== 'host') ?? [];
+  const participantSections = [
+    { title: 'Developer', users: participants.filter((user) => normalizeJobRole(user.jobRole) === 'developer') },
+    { title: 'Test', users: participants.filter((user) => normalizeJobRole(user.jobRole) === 'test') },
+    { title: 'Observer', users: participants.filter((user) => normalizeJobRole(user.jobRole) === 'observer') },
+  ];
   const canEnterRoom = userName.trim().length > 0;
   const canVote = Boolean(room?.ticket.trim()) && !room?.revealed;
   const toggleTheme = () => {
@@ -167,6 +183,11 @@ function PokerPlanningPage() {
       return;
     }
 
+    if (editName.trim().length < MIN_NAME_LENGTH) {
+      setProfileError(`Name must be at least ${MIN_NAME_LENGTH} characters.`);
+      return;
+    }
+
     socketRef.current?.emit('update_profile', {
       roomId: activeRoomId,
       userName: formatDisplayName(editName),
@@ -176,6 +197,10 @@ function PokerPlanningPage() {
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
     if (!nextRoomId || !userName.trim()) return;
+    if (userName.trim().length < MIN_NAME_LENGTH) {
+      setJoinError(`Name must be at least ${MIN_NAME_LENGTH} characters.`);
+      return;
+    }
     const socket = socketRef.current;
     if (!socket) return;
     const formattedUserName = formatDisplayName(userName);
@@ -234,6 +259,12 @@ function PokerPlanningPage() {
           </div>
         )}
 
+        {joinError && (
+          <p className="mb-3 text-sm font-semibold text-rose-500">
+            {joinError}
+          </p>
+        )}
+
         <input
           value={userName}
           onChange={e => {
@@ -245,21 +276,24 @@ function PokerPlanningPage() {
         />
 
         {isInviteJoin && (
-          <input
-            value={jobRole}
-            onChange={e => {
-              setJobRole(e.target.value);
-              if (joinError) setJoinError('');
-            }}
-            placeholder="Role optional (e.g. dev, test)"
-            className={`mb-8 h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
-          />
-        )}
-
-        {joinError && (
-          <p className="mb-4 text-center text-sm font-semibold text-rose-500">
-            {joinError}
-          </p>
+          <div className="relative mb-8">
+            <select
+              value={jobRole}
+              onChange={e => {
+                setJobRole(e.target.value);
+                if (joinError) setJoinError('');
+              }}
+              className={`h-14 w-full rounded-[1.15rem] px-5 pr-14 text-base font-medium outline-none transition appearance-none ${isDarkMode ? 'border border-slate-700 bg-slate-800 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 focus:border-slate-300'} ${jobRole ? isDarkMode ? 'text-slate-100' : 'text-slate-700' : isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}
+            >
+              <option value="">Select a role</option>
+              <option value="Developer">Developer</option>
+              <option value="Test">Test</option>
+              <option value="Observer">Observer</option>
+            </select>
+            <div className={`pointer-events-none absolute inset-y-0 right-5 flex items-center ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <ChevronDown size={20} />
+            </div>
+          </div>
         )}
 
         <button
@@ -299,10 +333,41 @@ function PokerPlanningPage() {
               </div>
             )}
           </div>
-          <div className="flex items-start gap-3">
+          <div className="flex flex-col items-end gap-3">
+            {host && (
+              <button
+                type="button"
+                onClick={() => host.id === me?.id && openProfileModal(host)}
+                className={`min-w-[260px] rounded-[1.5rem] px-4 py-3 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-900' : 'border border-slate-200 bg-white'} ${host.id === me?.id ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
+                    {host.name.slice(0, 1) || '?'}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p
+                      title={host.name}
+                      className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
+                    >
+                      {host.name}
+                    </p>
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-500">
+                      {host.id === me?.id ? 'You are host' : 'Host'}
+                    </p>
+                  </div>
+
+                  <div className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-700'}`}>
+                    Managing
+                  </div>
+                </div>
+              </button>
+            )}
+
             {me?.role === 'host' && (
               <HostControls 
                 onReveal={() => socketRef.current?.emit('reveal', activeRoomId)} 
+                onHistory={() => setIsHistoryModalOpen(true)}
                 onNext={() => socketRef.current?.emit('next_round', activeRoomId)}
                 isDarkMode={isDarkMode}
               />
@@ -313,11 +378,15 @@ function PokerPlanningPage() {
         <TicketDisplay 
           ticket={room?.ticket || ''} 
           isHost={me?.role === 'host'} 
-          onUpdate={(ticket: string) => socketRef.current?.emit('update_ticket', { roomId: activeRoomId, ticket })}
+          onUpdate={(ticket: string) => {
+            if (ticketError) setTicketError('');
+            socketRef.current?.emit('update_ticket', { roomId: activeRoomId, ticket });
+          }}
+          error={ticketError}
           isDarkMode={isDarkMode}
         />
 
-        {me?.role === 'voter' && (
+        {me?.role === 'voter' && !room?.revealed && (
           <div className="flex flex-col items-center">
             <div className="flex gap-4">
               {CARDS.map(val => (
@@ -336,10 +405,59 @@ function PokerPlanningPage() {
           </div>
         )}
 
-        {room?.revealed && (
-          <div className="mt-12 flex items-center justify-center">
+        {room?.revealed && me?.role === 'host' && (
+          <div className="mt-12 w-full max-w-4xl">
+            <div className={`rounded-[1.9rem] p-4 shadow-[0_18px_40px_rgba(15,23,42,0.16)] ${isDarkMode ? 'border border-slate-800 bg-slate-900/70' : 'border border-slate-200 bg-white/90'}`}>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className={`text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                    Revealed Summary
+                  </p>
+                  <p className={`mt-1 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Averages by role plus the overall estimate
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {[
+                { label: 'Developer Average', value: calculateRoleAverage(room, 'Developer') },
+                { label: 'Test Average', value: calculateRoleAverage(room, 'Test') },
+                { label: 'Observer Average', value: calculateRoleAverage(room, 'Observer') },
+                { label: 'Overall Average', value: calculateAvg(room) },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className={`rounded-[1.45rem] px-4 py-4 ${isDarkMode ? 'border border-slate-800 bg-slate-950/80' : 'border border-slate-200 bg-slate-50/90'}`}
+                >
+                  <p className={`min-h-[2.5rem] text-[11px] font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                    {item.label}
+                  </p>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div
+                      style={{ backgroundColor: getScoreColor(item.value) }}
+                      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl font-black text-white shadow-lg"
+                    >
+                      {item.value}
+                    </div>
+                    <p className={`text-sm leading-5 font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {item.value === '-' ? 'No votes yet' : 'Based on revealed votes'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {room?.revealed && me?.role !== 'host' && (
+          <div className="mt-8 flex min-h-[16rem] flex-col items-center justify-start">
+            <p className={`mb-5 text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+              Overall Average
+            </p>
             <div
-              style={{ backgroundColor: getAverageCardColor(room) }}
+              style={{ backgroundColor: getScoreColor(calculateAvg(room)) }}
               className="flex h-44 w-32 items-center justify-center rounded-[2rem] text-5xl font-black text-white shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
             >
               {calculateAvg(room)}
@@ -365,99 +483,87 @@ function PokerPlanningPage() {
           </div>
 
           <div className="space-y-6">
-            {host && (
-              <div>
-                <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>Host</p>
-                <button
-                  type="button"
-                  onClick={() => host.id === me?.id && openProfileModal(host)}
-                  className={`w-full rounded-[1.7rem] px-4 py-4 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-white'} ${host.id === me?.id ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
-                      {host.name.slice(0, 1) || '?'}
-                    </div>
+            {participantSections.map((section) => (
+              <div
+                key={section.title}
+                className={`rounded-[1.5rem] p-4 ${isDarkMode ? 'border border-slate-800/90 bg-slate-900/40' : 'border border-slate-200 bg-slate-50/80'}`}
+              >
+                <div className={`mb-3 flex items-center gap-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                  <p className="text-xs font-black uppercase tracking-[0.18em]">
+                    {section.title} ({section.users.length})
+                  </p>
+                  <div className={`h-px flex-1 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`} />
+                </div>
 
-                    <div className="min-w-0 flex-1">
-                      <p
-                        title={host.name}
-                        className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
-                      >
-                        {host.name}
-                      </p>
-                      <p className="text-sm font-bold uppercase tracking-[0.12em] text-blue-500">
-                        {host.id === me?.id ? 'You' : 'Host'}
-                      </p>
-                    </div>
+                {section.users.length ? (
+                  <div className="space-y-4">
+                    {section.users.map((user) => {
+                      const isCurrentUser = user.id === me?.id;
+                      const hasVoted = user.vote !== null;
+                      const showVoteValue = room?.revealed && user.vote !== null;
+                      const participantLabel = isCurrentUser ? 'YOU' : section.title.toUpperCase();
+                      const isObserverSection = section.title === 'Observer';
 
-                    <div className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-700'}`}>
-                      Managing
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            <div>
-              <p className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
-                Voters ({participants.length})
-              </p>
-
-              <div className="space-y-4">
-                {participants.map((user) => {
-                  const isCurrentUser = user.id === me?.id;
-                  const hasVoted = user.vote !== null;
-                  const showVoteValue = room?.revealed && user.vote !== null;
-                  const participantLabel = isCurrentUser ? 'YOU' : (user.jobRole || 'VOTER').toUpperCase();
-
-                  return (
-                    <button
-                      type="button"
-                      key={user.id}
-                      onClick={() => isCurrentUser && openProfileModal(user)}
-                      className={`flex w-full items-center gap-3 rounded-[1.55rem] px-4 py-3.5 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/70'} ${isCurrentUser ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
-                    >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
-                        {user.name.slice(0, 1) || '?'}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <p
-                          title={user.name}
-                          className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
+                      return (
+                        <button
+                          type="button"
+                          key={user.id}
+                          onClick={() => isCurrentUser && openProfileModal(user)}
+                          className={`flex w-full items-center gap-3 rounded-[1.55rem] px-4 py-3.5 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/70'} ${isCurrentUser ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
                         >
-                          {user.name}
-                        </p>
-                        <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-500">
-                          {participantLabel}
-                        </p>
-                      </div>
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
+                            {user.name.slice(0, 1) || '?'}
+                          </div>
 
-                      <div className="flex min-w-[88px] items-center justify-end">
-                        {showVoteValue ? (
-                          <div
-                            style={{ backgroundColor: COLORS[String(user.vote)] }}
-                            className="flex h-14 w-11 items-center justify-center rounded-2xl text-xl font-black text-white shadow-lg"
-                          >
-                            {user.vote}
+                          <div className="min-w-0 flex-1">
+                            <p
+                              title={user.name}
+                              className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
+                            >
+                              {user.name}
+                            </p>
+                            <p className="text-xs font-bold uppercase tracking-[0.12em] text-blue-500">
+                              {participantLabel}
+                            </p>
                           </div>
-                        ) : hasVoted ? (
-                          <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-600">
-                            <Check size={14} strokeWidth={3} />
-                            Voted
+
+                          <div className="flex min-w-[88px] items-center justify-end">
+                            {showVoteValue ? (
+                              <div
+                                style={{ backgroundColor: COLORS[String(user.vote)] }}
+                                className="flex h-14 w-11 items-center justify-center rounded-2xl text-xl font-black text-white shadow-lg"
+                              >
+                                {user.vote}
+                              </div>
+                            ) : hasVoted ? (
+                              <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-600">
+                                <Check size={14} strokeWidth={3} />
+                                Voted
+                              </div>
+                            ) : (
+                              isObserverSection ? (
+                                <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+                                  Optional
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-xs font-black text-amber-600">
+                                  <Clock3 size={14} strokeWidth={2.5} />
+                                  Waiting
+                                </div>
+                              )
+                            )}
                           </div>
-                        ) : (
-                          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-xs font-black text-amber-600">
-                            <Clock3 size={14} strokeWidth={2.5} />
-                            Waiting
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className={`rounded-[1.35rem] px-4 py-4 text-sm font-medium ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-500' : 'border border-slate-200 bg-slate-50/70 text-slate-400'}`}>
+                    No {section.title.toLowerCase()}s yet.
+                  </div>
+                )}
               </div>
-            </div>
+            ))}
 
             {!room?.users.length && (
               <div className={`rounded-[1.75rem] px-5 py-6 text-center text-sm font-semibold shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-500' : 'border border-slate-200 bg-slate-50/70 text-slate-400'}`}>
@@ -479,6 +585,11 @@ function PokerPlanningPage() {
             </div>
 
             <div className="space-y-4">
+              {profileError && (
+                <p className="text-sm font-semibold text-rose-500">
+                  {profileError}
+                </p>
+              )}
               <input
                 value={editName}
                 onChange={(event) => {
@@ -500,12 +611,6 @@ function PokerPlanningPage() {
                 />
               )}
             </div>
-
-            {profileError && (
-              <p className="mt-4 text-sm font-semibold text-rose-500">
-                {profileError}
-              </p>
-            )}
 
             <div className="mt-8 flex justify-end gap-3">
               <button
@@ -529,25 +634,92 @@ function PokerPlanningPage() {
           </div>
         </div>
       )}
+
+      {isHistoryModalOpen && me?.role === 'host' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
+          <div className={`w-full max-w-2xl rounded-[2rem] p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <div>
+                <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Session History</h3>
+                <p className={`mt-2 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Completed tickets stay here until this room session ends.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsHistoryModalOpen(false)}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition ${isDarkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+                aria-label="Close history"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {room?.history?.length ? (
+              <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+                {room.history.map((entry, index) => (
+                  <div
+                    key={`${entry.completedAt}-${entry.ticket}-${index}`}
+                    className={`flex items-center gap-4 rounded-[1.5rem] px-5 py-4 ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/80'}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p
+                        title={entry.ticket}
+                        className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}
+                      >
+                        {entry.ticket}
+                      </p>
+                      <p className={`mt-1 text-xs font-bold uppercase tracking-[0.14em] ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+                        {formatHistoryTimestamp(entry)}
+                      </p>
+                    </div>
+
+                    <div
+                      style={{ backgroundColor: COLORS[String(entry.score)] ?? '#2563eb' }}
+                      className="flex h-16 w-14 shrink-0 items-center justify-center rounded-[1.35rem] text-2xl font-black text-white shadow-lg"
+                    >
+                      {entry.score}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={`rounded-[1.75rem] px-5 py-10 text-center text-sm font-semibold ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-500' : 'border border-slate-200 bg-slate-50/70 text-slate-500'}`}>
+                No completed tickets yet. Reveal and move to the next ticket to start building session history.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function calculateAvg(room: RoomState) {
-  const submittedVotes = room.users
-    .map((u) => u.vote)
+  return calculateAverageForUsers(room.users) ?? '1';
+}
+
+function calculateRoleAverage(room: RoomState, jobRole: string) {
+  return calculateAverageForUsers(
+    room.users.filter((user) => normalizeJobRole(user.jobRole) === normalizeJobRole(jobRole))
+  ) ?? '-';
+}
+
+function calculateAverageForUsers(users: User[]) {
+  const submittedVotes = users
+    .map((user) => user.vote)
     .filter((vote): vote is number | '?' => vote !== null);
 
   if (submittedVotes.length > 0 && submittedVotes.every((vote) => vote === '?')) {
     return '?';
   }
 
-  const votes = room.users
-    .filter((u): u is typeof u & { vote: number } => typeof u.vote === 'number')
-    .map((u) => u.vote)
+  const votes = users
+    .filter((user): user is User & { vote: number } => typeof user.vote === 'number')
+    .map((user) => user.vote)
     .sort((a, b) => a - b);
 
-  if (!votes.length) return '1';
+  if (!votes.length) return null;
 
   const middleIndex = Math.floor(votes.length / 2);
   const median = votes.length % 2 === 0
@@ -561,17 +733,38 @@ function calculateAvg(room: RoomState) {
   return String(closestScore);
 }
 
-function getAverageCardColor(room: RoomState) {
-  const calculatedAverage = calculateAvg(room);
+function normalizeJobRole(jobRole: string) {
+  return jobRole.trim().toLowerCase();
+}
 
-  if (calculatedAverage === '?') {
+function getScoreColor(score: string) {
+  if (score === '?') {
     return COLORS['?'];
   }
 
-  const average = Number(calculatedAverage);
+  if (score === '-') {
+    return '#475569';
+  }
+
+  const average = Number(score);
   const nearestCard = SCORE_VALUES.reduce((closest, current) => {
     return Math.abs(current - average) < Math.abs(closest - average) ? current : closest;
   }, SCORE_VALUES[0]);
 
   return COLORS[String(nearestCard)];
+}
+
+function formatHistoryTimestamp(entry: TicketHistoryEntry) {
+  const completedAt = new Date(entry.completedAt);
+
+  if (Number.isNaN(completedAt.getTime())) {
+    return 'Completed just now';
+  }
+
+  return completedAt.toLocaleString([], {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
