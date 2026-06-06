@@ -1,5 +1,5 @@
 import { Moon, Sun } from 'lucide-react';
-import { RoomState, User } from '@/types';
+import { CardSet, RoomState, User } from '@/types';
 import { ParticipantCard } from './ParticipantCard';
 
 interface ParticipantSection {
@@ -17,9 +17,11 @@ interface Props {
 }
 
 export function ParticipantsPanel({ room, me, participantSections, isDarkMode, onToggleTheme, onOpenProfile }: Props) {
+  const cardSet = room?.cardSet;
+
   return (
-    <aside className={`w-full max-w-[360px] p-6 backdrop-blur ${isDarkMode ? 'border-l border-slate-800 bg-slate-900/80' : 'border-l border-slate-200/80 bg-white/70'}`}>
-      <div className="sticky top-0 max-h-screen overflow-y-auto pr-1">
+    <aside className={`w-full p-4 sm:p-6 lg:max-w-90 lg:backdrop-blur ${isDarkMode ? 'border-t border-slate-800 bg-slate-900/80 lg:border-l lg:border-t-0' : 'border-t border-slate-200/80 bg-white/70 lg:border-l lg:border-t-0'}`}>
+      <div className="lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pr-1">
         <div className="mb-6 flex items-center justify-between">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
             Participants ({room?.users.length ?? 0})
@@ -38,7 +40,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
           {participantSections.map((section) => (
             <div
               key={section.title}
-              className={`rounded-[1.5rem] p-4 ${isDarkMode ? 'border border-slate-800/90 bg-slate-900/40' : 'border border-slate-200 bg-slate-50/80'}`}
+              className={`rounded-3xl p-4 ${isDarkMode ? 'border border-slate-800/90 bg-slate-900/40' : 'border border-slate-200 bg-slate-50/80'}`}
             >
               <div className={`mb-3 flex items-center gap-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
                 <p className="text-xs font-black uppercase tracking-[0.18em]">
@@ -57,6 +59,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
                       isObserverSection={section.title === 'Observer'}
                       revealed={room?.revealed ?? false}
                       isDarkMode={isDarkMode}
+                      cardSet={cardSet!}
                       onOpenProfile={() => onOpenProfile(user)}
                     />
                   ))}

@@ -1,9 +1,10 @@
 "use client";
+import { ChevronRight } from 'lucide-react';
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
-import { RoomState, User } from '@/types';
-import { SOCKET_URL, THEME_STORAGE_KEY, MIN_NAME_LENGTH } from './lib/constants';
+import { CardSet, RoomState, User } from '@/types';
+import { DEFAULT_CARD_SET, SOCKET_URL, THEME_STORAGE_KEY, MIN_NAME_LENGTH } from './lib/constants';
 import { normalizeJobRole } from './lib/scoring';
 import { JoinScreen } from './components/JoinScreen';
 import { InviteLink } from './components/InviteLink';
@@ -15,6 +16,8 @@ import { ResultsSummary } from './components/ResultsSummary';
 import { ParticipantsPanel } from './components/ParticipantsPanel';
 import { ProfileModal } from './components/ProfileModal';
 import { HistoryModal } from './components/HistoryModal';
+import { CardSetModal } from './components/CardSetModal';
+import { AllVotedBanner } from './components/AllVotedBanner';
 
 type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -45,6 +48,8 @@ function PokerPlanningPage() {
   const [profileError, setProfileError] = useState('');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isCardSetModalOpen, setIsCardSetModalOpen] = useState(false);
+  const [allVotedAlert, setAllVotedAlert] = useState(false);
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState('');
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
@@ -92,7 +97,9 @@ function PokerPlanningPage() {
       setJoinError('');
       setTicketError('');
       setJoined(true);
+      if (nextRoom.revealed) setAllVotedAlert(false);
     });
+    socket.on('all_voted', () => setAllVotedAlert(true));
     socket.on('join_error', (message: string) => setJoinError(message));
     socket.on('ticket_update_error', (message: string) => setTicketError(message));
     socket.on('profile_update_error', (message: string) => setProfileError(message));
@@ -122,6 +129,7 @@ function PokerPlanningPage() {
       socket?.off('ticket_update_error');
       socket?.off('profile_update_error');
       socket?.off('profile_update_success');
+      socket?.off('all_voted');
       socket?.disconnect();
       socketRef.current = null;
     };
@@ -142,6 +150,8 @@ function PokerPlanningPage() {
     { title: 'Observer', users: participants.filter((u) => normalizeJobRole(u.jobRole) === 'observer') },
   ];
   const canVote = Boolean(room?.ticket.trim()) && !room?.revealed;
+  const cardSet = room?.cardSet ?? DEFAULT_CARD_SET;
+  const canChangeCardSet = me?.role === 'host' && !room?.ticket.trim() && !room?.revealed;
 
   const toggleTheme = () => {
     setThemePreference((current) => {
@@ -177,6 +187,10 @@ function PokerPlanningPage() {
       userName: capitalize(editName),
       jobRole: capitalize(editRole),
     });
+  };
+
+  const handleApplyCardSet = (nextCardSet: CardSet) => {
+    socketRef.current?.emit('update_card_set', { roomId: activeRoomId, cardSet: nextCardSet });
   };
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
@@ -222,23 +236,22 @@ function PokerPlanningPage() {
   );
 
   return (
-    <div className={`flex min-h-screen font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50'}`}>
-      <main className="flex flex-1 flex-col items-center p-12">
-        <header className="mb-10 flex w-full max-w-5xl items-start justify-between gap-6">
-          <div className="min-w-0">
-            <h2 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-700'}`}>
-              Planning Poker
-            </h2>
-            {me?.role === 'host' && inviteLink && (
-              <InviteLink
-                inviteLink={inviteLink}
-                isDarkMode={isDarkMode}
-                copyStatus={copyStatus}
-                onCopy={async () => { await navigator.clipboard.writeText(inviteLink); setCopyStatus('copied'); }}
-              />
-            )}
-          </div>
-          <div className="flex flex-col items-end gap-3">
+    <div className={`flex min-h-screen flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50'}`}>
+      <main className="flex flex-1 flex-col items-center px-4 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-6">
+        <header className="mb-3 sm:mb-5 w-full max-w-5xl space-y-3">
+          {/* Row 1: title + host card */}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                  Planning Poker
+                </h2>
+                <img src="/playing-cards.png" alt="" aria-hidden="true" className="h-8 w-auto" />
+              </div>
+              <p className={`mt-0.5 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Estimate together. Deliver better.
+              </p>
+            </div>
             {host && (
               <HostCard
                 host={host}
@@ -247,15 +260,36 @@ function PokerPlanningPage() {
                 onOpenProfile={() => openProfileModal(host)}
               />
             )}
-            {me?.role === 'host' && (
+          </div>
+          {/* Row 2: invite link */}
+          {me?.role === 'host' && inviteLink && (
+            <InviteLink
+              inviteLink={inviteLink}
+              isDarkMode={isDarkMode}
+              copyStatus={copyStatus}
+              onCopy={async () => { await navigator.clipboard.writeText(inviteLink); setCopyStatus('copied'); }}
+            />
+          )}
+          {/* Row 3: tool buttons left, Next Ticket right */}
+          {me?.role === 'host' && (
+            <div className="flex flex-wrap items-center gap-3">
               <HostControls
                 onReveal={() => socketRef.current?.emit('reveal', activeRoomId)}
                 onHistory={() => setIsHistoryModalOpen(true)}
-                onNext={() => socketRef.current?.emit('next_round', activeRoomId)}
+                onCardSet={() => setIsCardSetModalOpen(true)}
+                onToggleAutoReveal={() => socketRef.current?.emit('toggle_auto_reveal', activeRoomId)}
+                showCardSet={canChangeCardSet}
+                autoReveal={room?.autoReveal ?? false}
                 isDarkMode={isDarkMode}
               />
-            )}
-          </div>
+              <button
+                onClick={() => socketRef.current?.emit('next_round', activeRoomId)}
+                className="ml-auto cursor-pointer flex items-center gap-2 px-6 py-2 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700 transition"
+              >
+                Next Ticket <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
         </header>
 
         <TicketDisplay
@@ -274,12 +308,13 @@ function PokerPlanningPage() {
             myVote={me.vote}
             canVote={canVote}
             isDarkMode={isDarkMode}
-            onVote={(val) => socketRef.current?.emit('cast_vote', { roomId: activeRoomId, vote: me.vote === val ? null : val })}
+            cardSet={cardSet}
+            onVote={(val) => socketRef.current?.emit('cast_vote', { roomId: activeRoomId, vote: String(me.vote) === String(val) ? null : val })}
           />
         )}
 
         {room?.revealed && (
-          <ResultsSummary room={room} isHost={me?.role === 'host'} isDarkMode={isDarkMode} />
+          <ResultsSummary room={room} cardSet={cardSet} isHost={me?.role === 'host'} isDarkMode={isDarkMode} />
         )}
       </main>
 
@@ -310,8 +345,29 @@ function PokerPlanningPage() {
       {isHistoryModalOpen && me?.role === 'host' && room && (
         <HistoryModal
           room={room}
+          cardSet={cardSet}
           isDarkMode={isDarkMode}
           onClose={() => setIsHistoryModalOpen(false)}
+        />
+      )}
+
+      {allVotedAlert && me?.role === 'host' && (
+        <AllVotedBanner
+          isDarkMode={isDarkMode}
+          onReveal={() => {
+            socketRef.current?.emit('reveal', activeRoomId);
+            setAllVotedAlert(false);
+          }}
+          onDismiss={() => setAllVotedAlert(false)}
+        />
+      )}
+
+      {isCardSetModalOpen && me?.role === 'host' && (
+        <CardSetModal
+          currentCardSet={cardSet}
+          isDarkMode={isDarkMode}
+          onApply={handleApplyCardSet}
+          onClose={() => setIsCardSetModalOpen(false)}
         />
       )}
     </div>

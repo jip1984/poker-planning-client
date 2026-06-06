@@ -1,18 +1,18 @@
 import { X } from 'lucide-react';
-import { RoomState } from '@/types';
-import { COLORS } from '../lib/constants';
-import { formatHistoryTimestamp } from '../lib/scoring';
+import { CardSet, RoomState } from '@/types';
+import { formatHistoryTimestamp, getCardColor } from '../lib/scoring';
 
 interface Props {
   room: RoomState;
+  cardSet: CardSet;
   isDarkMode: boolean;
   onClose: () => void;
 }
 
-export function HistoryModal({ room, isDarkMode, onClose }: Props) {
+export function HistoryModal({ room, cardSet, isDarkMode, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
-      <div className={`w-full max-w-2xl rounded-[2rem] p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
+      <div className={`w-full max-w-2xl rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Session History</h3>
@@ -35,7 +35,7 @@ export function HistoryModal({ room, isDarkMode, onClose }: Props) {
             {room.history.map((entry, index) => (
               <div
                 key={`${entry.completedAt}-${entry.ticket}-${index}`}
-                className={`flex items-center gap-4 rounded-[1.5rem] px-5 py-4 ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/80'}`}
+                className={`flex items-center gap-4 rounded-3xl px-5 py-4 ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/80'}`}
               >
                 <div className="min-w-0 flex-1">
                   <p title={entry.ticket} className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
@@ -46,7 +46,7 @@ export function HistoryModal({ room, isDarkMode, onClose }: Props) {
                   </p>
                 </div>
                 <div
-                  style={{ backgroundColor: COLORS[String(entry.score)] ?? '#2563eb' }}
+                  style={{ backgroundColor: getCardColor(entry.score, cardSet.cards) }}
                   className="flex h-16 w-14 shrink-0 items-center justify-center rounded-[1.35rem] text-2xl font-black text-white shadow-lg"
                 >
                   {entry.score}

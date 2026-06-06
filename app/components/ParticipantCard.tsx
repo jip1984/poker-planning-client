@@ -1,6 +1,6 @@
 import { Check, Clock3 } from 'lucide-react';
-import { User } from '@/types';
-import { COLORS } from '../lib/constants';
+import { CardSet, User } from '@/types';
+import { getCardColor } from '../lib/scoring';
 
 interface Props {
   user: User;
@@ -8,10 +8,11 @@ interface Props {
   isObserverSection: boolean;
   revealed: boolean;
   isDarkMode: boolean;
+  cardSet: CardSet;
   onOpenProfile: () => void;
 }
 
-export function ParticipantCard({ user, isCurrentUser, isObserverSection, revealed, isDarkMode, onOpenProfile }: Props) {
+export function ParticipantCard({ user, isCurrentUser, isObserverSection, revealed, isDarkMode, cardSet, onOpenProfile }: Props) {
   const hasVoted = user.vote !== null;
   const showVoteValue = revealed && user.vote !== null;
 
@@ -21,7 +22,7 @@ export function ParticipantCard({ user, isCurrentUser, isObserverSection, reveal
       onClick={() => isCurrentUser && onOpenProfile()}
       className={`flex w-full items-center gap-3 rounded-[1.55rem] px-4 py-3.5 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/70'} ${isCurrentUser ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-base font-black uppercase text-blue-600">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-black uppercase text-blue-600">
         {user.name.slice(0, 1) || '?'}
       </div>
 
@@ -34,7 +35,7 @@ export function ParticipantCard({ user, isCurrentUser, isObserverSection, reveal
       <div className="flex shrink-0 items-center justify-end">
         {showVoteValue ? (
           <div
-            style={{ backgroundColor: COLORS[String(user.vote)] }}
+            style={{ backgroundColor: getCardColor(user.vote!, cardSet.cards) }}
             className="flex h-14 w-11 items-center justify-center rounded-2xl text-xl font-black text-white shadow-lg"
           >
             {user.vote}
