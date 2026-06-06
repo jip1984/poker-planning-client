@@ -1,3 +1,5 @@
+import { ChevronDown } from 'lucide-react';
+
 interface Props {
   isDarkMode: boolean;
   isHost: boolean;
@@ -45,15 +47,24 @@ export function ProfileModal({
             className={`h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
           />
           {!isHost && (
-            <input
-              value={editRole}
-              onChange={(e) => {
-                onEditRoleChange(e.target.value);
-                if (error) onErrorClear();
-              }}
-              placeholder="Role optional (e.g. dev, test)"
-              className={`h-14 w-full rounded-[1.15rem] px-5 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 text-slate-700 placeholder:text-slate-400 focus:border-slate-300'}`}
-            />
+            <div className="relative">
+              <select
+                value={editRole}
+                onChange={(e) => {
+                  onEditRoleChange(e.target.value);
+                  if (error) onErrorClear();
+                }}
+                className={`h-14 w-full appearance-none rounded-[1.15rem] px-5 pr-14 text-base font-medium outline-none transition ${isDarkMode ? 'border border-slate-700 bg-slate-800 focus:border-slate-500' : 'border border-slate-200 bg-slate-50/60 focus:border-slate-300'} ${editRole ? (isDarkMode ? 'text-slate-100' : 'text-slate-700') : (isDarkMode ? 'text-slate-500' : 'text-slate-400')}`}
+              >
+                <option value="" disabled hidden>Select a role</option>
+                <option value="Developer">Developer</option>
+                <option value="Test">Test</option>
+                <option value="Observer">Observer</option>
+              </select>
+              <div className={`pointer-events-none absolute inset-y-0 right-5 flex items-center ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                <ChevronDown size={20} />
+              </div>
+            </div>
           )}
         </div>
 
