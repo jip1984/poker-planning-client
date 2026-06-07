@@ -8,52 +8,7 @@ interface Props {
   isDarkMode: boolean;
 }
 
-export function ResultsSummary({ room, cardSet, isHost, isDarkMode }: Props) {
-  if (!isHost) {
-    const avg = calculateAvg(room);
-    const roleItems = [
-      { label: 'Developer Average', value: calculateRoleAverage(room, 'Developer') },
-      { label: 'Test Average', value: calculateRoleAverage(room, 'Test') },
-      { label: 'Observer Average', value: calculateRoleAverage(room, 'Observer') },
-    ];
-    return (
-      <div className="mt-8 flex flex-col items-center gap-6">
-        <div className="flex flex-col items-center">
-          <p className="mb-5 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-            Overall Average
-          </p>
-          <div
-            style={{ backgroundColor: getScoreColor(avg, cardSet) }}
-            className="flex h-32 w-24 sm:h-44 sm:w-32 items-center justify-center rounded-4xl text-4xl sm:text-5xl font-black text-white shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
-          >
-            {avg}
-          </div>
-        </div>
-
-        <div className="grid w-full max-w-lg gap-3 grid-cols-3">
-          {roleItems.map((item) => (
-            <div
-              key={item.label}
-              className={`rounded-[1.45rem] px-4 py-4 ${isDarkMode ? 'border border-slate-800 bg-slate-900/70' : 'border border-slate-200 bg-white/90'}`}
-            >
-              <p className="min-h-8 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                {item.label}
-              </p>
-              <div className="mt-3 flex items-center gap-2">
-                <div
-                  style={{ backgroundColor: getScoreColor(item.value, cardSet) }}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black text-white shadow"
-                >
-                  {item.value}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
+function RevealedResults({ room, cardSet, isDarkMode }: { room: RoomState; cardSet: CardSet; isDarkMode: boolean }) {
   const overall = calculateAvg(room);
   const roleItems = [
     { label: 'Developer Average', value: calculateRoleAverage(room, 'Developer') },
@@ -62,32 +17,32 @@ export function ResultsSummary({ room, cardSet, isHost, isDarkMode }: Props) {
   ];
 
   return (
-    <div className="mt-8 flex flex-col items-center gap-6">
+    <div className="mt-8 flex flex-col items-center gap-8">
       <div className="flex flex-col items-center">
         <p className="mb-5 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
           Overall Average
         </p>
         <div
           style={{ backgroundColor: getScoreColor(overall, cardSet) }}
-          className="flex h-32 w-24 sm:h-44 sm:w-32 items-center justify-center rounded-4xl text-4xl sm:text-5xl font-black text-white shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
+          className="flex h-44 w-32 sm:h-56 sm:w-40 items-center justify-center rounded-4xl text-5xl sm:text-6xl font-black text-white shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
         >
           {overall}
         </div>
       </div>
 
-      <div className="grid w-full max-w-lg gap-3 grid-cols-3">
+      <div className="mx-auto grid w-full max-w-xl gap-4 grid-cols-3">
         {roleItems.map((item) => (
           <div
             key={item.label}
-            className={`rounded-[1.45rem] px-4 py-4 ${isDarkMode ? 'border border-slate-800 bg-slate-900/70' : 'border border-slate-200 bg-white/90'}`}
+            className={`rounded-[1.45rem] px-5 py-5 ${isDarkMode ? 'border border-slate-800 bg-slate-900/70' : 'border border-slate-200 bg-white/90'}`}
           >
-            <p className="min-h-8 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+            <p className="min-h-8 text-center text-xs font-black uppercase tracking-[0.18em] text-slate-500">
               {item.label}
             </p>
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 flex items-center justify-center gap-2">
               <div
                 style={{ backgroundColor: getScoreColor(item.value, cardSet) }}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black text-white shadow"
+                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-3xl font-black text-white shadow-lg"
               >
                 {item.value}
               </div>
@@ -97,4 +52,8 @@ export function ResultsSummary({ room, cardSet, isHost, isDarkMode }: Props) {
       </div>
     </div>
   );
+}
+
+export function ResultsSummary({ room, cardSet, isDarkMode }: Props) {
+  return <RevealedResults room={room} cardSet={cardSet} isDarkMode={isDarkMode} />;
 }
