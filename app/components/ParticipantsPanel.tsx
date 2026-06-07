@@ -29,7 +29,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
           <button
             type="button"
             onClick={onToggleTheme}
-            className={`flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${isDarkMode ? 'bg-slate-800 text-amber-300 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+            className={`cursor-pointer flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition ${isDarkMode ? 'bg-slate-800 text-amber-300 hover:bg-slate-700' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
             aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}

@@ -26,8 +26,8 @@ export function ProfileModal({
   onClose,
 }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
-      <div className={`w-full max-w-md rounded-[2rem] p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm" onClick={() => { onClose(); onErrorClear(); }}>
+      <div className={`w-full max-w-md rounded-[2rem] p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`} onClick={e => e.stopPropagation()}>
         <div className="mb-6">
           <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Edit Profile</h3>
           <p className={`mt-2 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>

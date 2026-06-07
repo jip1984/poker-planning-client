@@ -247,7 +247,7 @@ function PokerPlanningPage() {
                 <img src="/playing-cards.png" alt="" aria-hidden="true" className="h-8 w-auto" />
               </div>
               <p className={`mt-0.5 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Estimate together. Deliver better.
+                Estimate together, deliver better.
               </p>
             </div>
             {host && (

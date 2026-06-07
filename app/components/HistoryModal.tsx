@@ -11,8 +11,8 @@ interface Props {
 
 export function HistoryModal({ room, cardSet, isDarkMode, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
-      <div className={`w-full max-w-2xl rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm" onClick={onClose}>
+      <div className={`w-full max-w-2xl rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`} onClick={e => e.stopPropagation()}>
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Session History</h3>
@@ -23,7 +23,7 @@ export function HistoryModal({ room, cardSet, isDarkMode, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition ${isDarkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            className={`cursor-pointer flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition ${isDarkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
             aria-label="Close history"
           >
             <X size={18} />

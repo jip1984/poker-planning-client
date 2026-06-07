@@ -79,8 +79,8 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
   const presets = CARD_PRESETS.slice(0, -1);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
-      <div className={`w-full max-w-md rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm" onClick={onClose}>
+      <div className={`w-full max-w-md rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`} onClick={e => e.stopPropagation()}>
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Card Set</h3>
@@ -91,7 +91,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
           <button
             type="button"
             onClick={onClose}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition ${isDarkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            className={`cursor-pointer flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition ${isDarkMode ? 'bg-slate-800 text-slate-200 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
             aria-label="Close"
           >
             <X size={18} />
@@ -104,7 +104,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
               key={preset.name}
               type="button"
               onClick={() => setSelected(preset.name)}
-              className={`w-full rounded-2xl px-4 py-3.5 text-left transition ${
+              className={`cursor-pointer w-full rounded-2xl px-4 py-3.5 text-left transition ${
                 selected === preset.name
                   ? 'bg-blue-600 text-white'
                   : isDarkMode
@@ -122,7 +122,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
           <button
             type="button"
             onClick={() => setSelected('custom')}
-            className={`w-full rounded-2xl px-4 py-3.5 text-left transition ${
+            className={`cursor-pointer w-full rounded-2xl px-4 py-3.5 text-left transition ${
               selected === 'custom'
                 ? 'bg-blue-600 text-white'
                 : isDarkMode
@@ -153,7 +153,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
                       <button
                         type="button"
                         onClick={() => removeCard(i)}
-                        className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-500 text-white hover:bg-red-500 transition"
+                        className="cursor-pointer absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-500 text-white hover:bg-red-500 transition"
                         aria-label="Remove card"
                       >
                         <X size={9} strokeWidth={3} />
@@ -166,7 +166,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
                   <button
                     type="button"
                     onClick={addCard}
-                    className={`h-16 w-12 rounded-2xl border-2 border-dashed text-center transition flex items-center justify-center ${isDarkMode ? 'border-slate-700 text-slate-600 hover:border-slate-500 hover:text-slate-400' : 'border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-500'}`}
+                    className={`cursor-pointer h-16 w-12 rounded-2xl border-2 border-dashed text-center transition flex items-center justify-center ${isDarkMode ? 'border-slate-700 text-slate-600 hover:border-slate-500 hover:text-slate-400' : 'border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-500'}`}
                     aria-label="Add card"
                   >
                     <Plus size={18} />
@@ -188,7 +188,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
         <button
           type="button"
           onClick={handleApply}
-          className="mt-6 w-full rounded-2xl bg-blue-600 py-3 font-black text-white shadow-lg hover:bg-blue-700 transition"
+          className="cursor-pointer mt-6 w-full rounded-2xl bg-blue-600 py-3 font-black text-white shadow-lg hover:bg-blue-700 transition"
         >
           Apply
         </button>
