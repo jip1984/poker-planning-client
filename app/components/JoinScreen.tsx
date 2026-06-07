@@ -1,4 +1,5 @@
 import { ChevronDown, Moon, Sun } from 'lucide-react';
+import { Footer } from './Footer';
 
 interface Props {
   isDarkMode: boolean;
@@ -28,7 +29,7 @@ export function JoinScreen({
   onToggleTheme,
 }: Props) {
   return (
-    <div className={`flex min-h-screen items-center justify-center px-6 ${isDarkMode ? 'bg-[radial-gradient(circle_at_top,_#1f2937_0%,_#111827_40%,_#020617_100%)]' : 'bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f7f9fc_42%,_#edf2f7_100%)]'}`}>
+    <div className={`relative flex min-h-screen items-center justify-center px-6 ${isDarkMode ? 'bg-[radial-gradient(circle_at_top,_#1f2937_0%,_#111827_40%,_#020617_100%)]' : 'bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f7f9fc_42%,_#edf2f7_100%)]'}`}>
       <button
         type="button"
         onClick={onToggleTheme}
@@ -90,6 +91,7 @@ export function JoinScreen({
           {isInviteJoin ? 'Join Room' : 'Create Room'}
         </button>
       </div>
+      <Footer isDarkMode={isDarkMode} />
     </div>
   );
 }

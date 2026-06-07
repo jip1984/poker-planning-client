@@ -4,8 +4,9 @@ import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { CardSet, RoomState, User } from '@/types';
-import { DEFAULT_CARD_SET, SOCKET_URL, THEME_STORAGE_KEY, MIN_NAME_LENGTH } from './lib/constants';
+import { DEFAULT_CARD_SET, SOCKET_URL, THEME_STORAGE_KEY } from './lib/constants';
 import { normalizeJobRole } from './lib/scoring';
+import { joinSchema, joinHostSchema, profileSchema } from './lib/schemas';
 import { JoinScreen } from './components/JoinScreen';
 import { InviteLink } from './components/InviteLink';
 import { HostCard } from './components/HostCard';
@@ -174,12 +175,10 @@ function PokerPlanningPage() {
   };
 
   const handleProfileSave = () => {
-    if (!activeRoomId || !editName.trim()) {
-      setProfileError('Please enter a name.');
-      return;
-    }
-    if (editName.trim().length < MIN_NAME_LENGTH) {
-      setProfileError(`Name must be at least ${MIN_NAME_LENGTH} characters.`);
+    if (!activeRoomId) return;
+    const result = profileSchema.safeParse({ name: editName });
+    if (!result.success) {
+      setProfileError(result.error.issues[0].message);
       return;
     }
     socketRef.current?.emit('update_profile', {
@@ -194,13 +193,8 @@ function PokerPlanningPage() {
   };
 
   const joinRoom = (nextRoomId: string, role: 'host' | 'voter') => {
-    if (!nextRoomId || !userName.trim()) return;
-    if (userName.trim().length < MIN_NAME_LENGTH) {
-      setJoinError(`Name must be at least ${MIN_NAME_LENGTH} characters.`);
-      return;
-    }
     const socket = socketRef.current;
-    if (!socket) return;
+    if (!socket || !nextRoomId) return;
     setJoinError('');
     setRoomId(nextRoomId);
     if (typeof window !== 'undefined') {
@@ -213,9 +207,13 @@ function PokerPlanningPage() {
     const socket = socketRef.current;
     if (!socket) return;
     if (!isInviteJoin) {
+      const result = joinHostSchema.safeParse({ name: userName });
+      if (!result.success) { setJoinError(result.error.issues[0].message); return; }
       socket.emit('create_room', (nextRoomId: string) => joinRoom(nextRoomId, 'host'));
       return;
     }
+    const result = joinSchema.safeParse({ name: userName, jobRole });
+    if (!result.success) { setJoinError(result.error.issues[0].message); return; }
     joinRoom(roomIdFromUrl, 'voter');
   };
 
@@ -229,7 +227,7 @@ function PokerPlanningPage() {
       onUserNameChange={(name) => { setUserName(name); if (joinError) setJoinError(''); }}
       jobRole={jobRole}
       onJobRoleChange={(role) => { setJobRole(role); if (joinError) setJoinError(''); }}
-      canEnterRoom={userName.trim().length > 0}
+      canEnterRoom={userName.trim().length > 0 && (!isInviteJoin || jobRole.length > 0)}
       onEnterRoom={handleEnterRoom}
       onToggleTheme={toggleTheme}
     />
