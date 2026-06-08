@@ -14,9 +14,11 @@ interface Props {
   isDarkMode: boolean;
   onToggleTheme: () => void;
   onOpenProfile: (user: User) => void;
+  isHost?: boolean;
+  onPokeVoter?: (userId: string) => void;
 }
 
-export function ParticipantsPanel({ room, me, participantSections, isDarkMode, onToggleTheme, onOpenProfile }: Props) {
+export function ParticipantsPanel({ room, me, participantSections, isDarkMode, onToggleTheme, onOpenProfile, isHost, onPokeVoter }: Props) {
   const cardSet = room?.cardSet;
 
   return (
@@ -61,6 +63,8 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
                       isDarkMode={isDarkMode}
                       cardSet={cardSet!}
                       onOpenProfile={() => onOpenProfile(user)}
+                      isHost={isHost}
+                      onPoke={onPokeVoter ? () => onPokeVoter(user.id) : undefined}
                     />
                   ))}
                 </div>

@@ -19,6 +19,7 @@ import { ProfileModal } from './components/ProfileModal';
 import { HistoryModal } from './components/HistoryModal';
 import { CardSetModal } from './components/CardSetModal';
 import { AllVotedBanner } from './components/AllVotedBanner';
+import { PokedBanner } from './components/PokedBanner';
 
 type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -51,6 +52,7 @@ function PokerPlanningPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isCardSetModalOpen, setIsCardSetModalOpen] = useState(false);
   const [allVotedAlert, setAllVotedAlert] = useState(false);
+  const [isPoked, setIsPoked] = useState(false);
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState('');
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
@@ -108,6 +110,9 @@ function PokerPlanningPage() {
       setProfileError('');
       setIsProfileModalOpen(false);
     });
+    socket.on('poked', () => {
+      setIsPoked(true);
+    });
   }, []);
 
   const createConnectedSocket = useCallback(() => {
@@ -131,6 +136,7 @@ function PokerPlanningPage() {
       socket?.off('profile_update_error');
       socket?.off('profile_update_success');
       socket?.off('all_voted');
+      socket?.off('poked');
       socket?.disconnect();
       socketRef.current = null;
     };
@@ -153,6 +159,14 @@ function PokerPlanningPage() {
   const canVote = Boolean(room?.ticket.trim()) && !room?.revealed;
   const cardSet = room?.cardSet ?? DEFAULT_CARD_SET;
   const canChangeCardSet = me?.role === 'host' && !room?.ticket.trim() && !room?.revealed;
+  const hasIdleVoters = !room?.revealed && participants.some(u => u.vote === null && normalizeJobRole(u.jobRole) !== 'observer');
+
+  const onPokeVoter = (targetId: string) => {
+    socketRef.current?.emit('poke_voter', { roomId: activeRoomId, targetId });
+  };
+  const onPokeAll = () => {
+    socketRef.current?.emit('poke_all', activeRoomId);
+  };
 
   const toggleTheme = () => {
     setThemePreference((current) => {
@@ -234,7 +248,7 @@ function PokerPlanningPage() {
   );
 
   return (
-    <div className={`flex min-h-screen flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50'}`}>
+    <div className={`flex min-h-screen flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50'} ${isPoked ? 'animate-shake' : ''}`}>
       <main className="flex flex-1 flex-col items-center px-4 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-6">
         <header className="mb-3 sm:mb-5 w-full max-w-5xl space-y-3">
           {/* Row 1: title + host card */}
@@ -276,8 +290,10 @@ function PokerPlanningPage() {
                 onHistory={() => setIsHistoryModalOpen(true)}
                 onCardSet={() => setIsCardSetModalOpen(true)}
                 onToggleAutoReveal={() => socketRef.current?.emit('toggle_auto_reveal', activeRoomId)}
+                onPokeAll={onPokeAll}
                 showCardSet={canChangeCardSet}
                 autoReveal={room?.autoReveal ?? false}
+                hasIdleVoters={hasIdleVoters}
                 isDarkMode={isDarkMode}
               />
               <button
@@ -323,6 +339,8 @@ function PokerPlanningPage() {
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
         onOpenProfile={openProfileModal}
+        isHost={me?.role === 'host'}
+        onPokeVoter={me?.role === 'host' ? onPokeVoter : undefined}
       />
 
       {isProfileModalOpen && (
@@ -366,6 +384,13 @@ function PokerPlanningPage() {
           isDarkMode={isDarkMode}
           onApply={handleApplyCardSet}
           onClose={() => setIsCardSetModalOpen(false)}
+        />
+      )}
+
+      {isPoked && (
+        <PokedBanner
+          isDarkMode={isDarkMode}
+          onDismiss={() => setIsPoked(false)}
         />
       )}
     </div>
