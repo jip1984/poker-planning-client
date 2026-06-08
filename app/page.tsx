@@ -112,6 +112,25 @@ function PokerPlanningPage() {
     });
     socket.on('poked', () => {
       setIsPoked(true);
+      try {
+        const ctx = new AudioContext();
+        const t = ctx.currentTime;
+        const chime = (freq: number, start: number, duration: number, vol: number) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(vol, start + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+          osc.start(start);
+          osc.stop(start + duration);
+        };
+        chime(784, t, 0.4, 0.35);
+        chime(1047, t + 0.14, 0.55, 0.3);
+      } catch { /* autoplay blocked */ }
     });
   }, []);
 
