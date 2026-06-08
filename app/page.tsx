@@ -264,7 +264,7 @@ const onPokeAll = () => {
   );
 
   return (
-    <div className={`flex min-h-screen flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50'} ${isPoked ? 'animate-shake' : ''}`}>
+    <div className={`flex min-h-screen flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50'}`}>
       <main className="flex flex-1 flex-col items-center px-4 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-6">
         <header className="mb-3 sm:mb-5 w-full max-w-5xl space-y-3">
           {/* Row 1: title + host card */}
