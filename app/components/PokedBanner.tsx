@@ -1,4 +1,4 @@
-import { Hand } from 'lucide-react';
+import { TbHandFinger } from 'react-icons/tb';
 
 interface Props {
   isDarkMode: boolean;
@@ -14,7 +14,7 @@ export function PokedBanner({ isDarkMode, onDismiss }: Props) {
       >
         <div className="mb-5 flex justify-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/15 text-blue-500">
-            <Hand size={32} />
+            <TbHandFinger size={32} />
           </div>
         </div>
 

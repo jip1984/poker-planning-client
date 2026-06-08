@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { BookOpen, Eye, Hand, Sliders, Zap } from 'lucide-react';
+import { BookOpen, Eye, Sliders, Zap } from 'lucide-react';
+import { TbHandFinger } from 'react-icons/tb';
 
 interface Props {
   onReveal: () => void;
@@ -54,7 +55,7 @@ export const HostControls = ({ onReveal, onHistory, onCardSet, onToggleAutoRevea
           title={pokeCooldown ? 'Poke sent — wait a moment' : 'Poke all idle voters'}
           className={`cursor-pointer flex items-center gap-2 px-4 py-2 rounded-xl font-bold shadow-lg transition disabled:cursor-not-allowed disabled:opacity-40 ${isDarkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
         >
-          <Hand size={16} /> Poke
+          <TbHandFinger size={16} /> Poke
         </button>
       )}
     </div>
