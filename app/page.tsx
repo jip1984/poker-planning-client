@@ -180,10 +180,7 @@ function PokerPlanningPage() {
   const canChangeCardSet = me?.role === 'host' && !room?.ticket.trim() && !room?.revealed;
   const hasIdleVoters = !room?.revealed && participants.some(u => u.vote === null && normalizeJobRole(u.jobRole) !== 'observer');
 
-  const onPokeVoter = (targetId: string) => {
-    socketRef.current?.emit('poke_voter', { roomId: activeRoomId, targetId });
-  };
-  const onPokeAll = () => {
+const onPokeAll = () => {
     socketRef.current?.emit('poke_all', activeRoomId);
   };
 
@@ -358,8 +355,6 @@ function PokerPlanningPage() {
         isDarkMode={isDarkMode}
         onToggleTheme={toggleTheme}
         onOpenProfile={openProfileModal}
-        isHost={me?.role === 'host'}
-        onPokeVoter={me?.role === 'host' ? onPokeVoter : undefined}
       />
 
       {isProfileModalOpen && (
