@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { X, Plus } from 'lucide-react';
 import { CardSet, CardValue } from '@/types';
 import { CARD_PRESETS } from '../lib/constants';
+import { Modal } from './Modal';
 
 const MAX_CUSTOM_CARDS = 10;
 
@@ -79,11 +80,11 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
   const presets = CARD_PRESETS.slice(0, -1);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm" onClick={onClose}>
-      <div className={`w-full max-w-md rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`} onClick={e => e.stopPropagation()}>
+    <Modal titleId="card-set-title" onClose={onClose} maxWidth="max-w-md">
+      <div className={`w-full max-w-md rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Card Set</h3>
+            <h3 id="card-set-title" className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Card Set</h3>
             <p className={`mt-2 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               Choose which values to show for voting.
             </p>
@@ -98,11 +99,13 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
           </button>
         </div>
 
-        <div className="space-y-2">
+        <div role="radiogroup" aria-label="Card set" className="space-y-2">
           {presets.map((preset) => (
             <button
               key={preset.name}
               type="button"
+              role="radio"
+              aria-checked={selected === preset.name}
               onClick={() => setSelected(preset.name)}
               className={`cursor-pointer w-full rounded-2xl px-4 py-3.5 text-left transition ${
                 selected === preset.name
@@ -113,7 +116,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
               }`}
             >
               <p className="font-black">{preset.label}</p>
-              <p className={`mt-0.5 text-sm ${selected === preset.name ? 'text-blue-200' : 'text-slate-500'}`}>
+              <p className={`mt-0.5 text-sm ${selected === preset.name ? 'text-blue-50' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 {preset.cards.join(', ')}
               </p>
             </button>
@@ -121,6 +124,8 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
 
           <button
             type="button"
+            role="radio"
+            aria-checked={selected === 'custom'}
             onClick={() => setSelected('custom')}
             className={`cursor-pointer w-full rounded-2xl px-4 py-3.5 text-left transition ${
               selected === 'custom'
@@ -131,7 +136,7 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
             }`}
           >
             <p className="font-black">Custom</p>
-            <p className={`mt-0.5 text-sm ${selected === 'custom' ? 'text-blue-200' : 'text-slate-500'}`}>
+            <p className={`mt-0.5 text-sm ${selected === 'custom' ? 'text-blue-50' : isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               Build your own card set
             </p>
           </button>
@@ -143,20 +148,25 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
                   <div key={i} className="relative">
                     <input
                       type="text"
+                      inputMode="decimal"
+                      aria-label={`Card ${i + 1} value`}
                       value={val}
                       onChange={(e) => updateCard(i, e.target.value)}
                       maxLength={3}
                       placeholder="?"
-                      className={`h-16 w-12 rounded-2xl border-2 text-center text-lg font-black outline-none transition focus:border-blue-500 ${!isValidCardValue(val) && val !== '' ? 'border-red-500' : isDarkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-600' : 'border-slate-300 bg-white text-slate-900 placeholder-slate-300'}`}
+                      className={`h-16 w-12 rounded-2xl border-2 text-center text-lg font-black transition focus:border-blue-500 ${!isValidCardValue(val) && val !== '' ? 'border-red-500' : isDarkMode ? 'border-slate-700 bg-slate-800 text-white placeholder-slate-400' : 'border-slate-300 bg-white text-slate-900 placeholder-slate-500'}`}
                     />
                     {customCards.length > 2 && (
                       <button
                         type="button"
                         onClick={() => removeCard(i)}
-                        className="cursor-pointer absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-slate-500 text-white hover:bg-red-500 transition"
-                        aria-label="Remove card"
+                        className="group cursor-pointer absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full"
+                        aria-label={`Remove card ${i + 1}`}
                       >
-                        <X size={9} strokeWidth={3} />
+                        {/* 28px hit area, smaller visible dot */}
+                        <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-slate-500 text-white transition group-hover:bg-red-500">
+                          <X size={11} strokeWidth={3} />
+                        </span>
                       </button>
                     )}
                   </div>
@@ -174,12 +184,12 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
                 )}
               </div>
 
-              <p className={`mt-3 text-xs font-medium ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+              <p className={`mt-3 text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 {customCards.length}/{MAX_CUSTOM_CARDS} cards · Only numbers or <span className="font-black">?</span> allowed
               </p>
 
               {customError && (
-                <p className="mt-2 text-xs font-semibold text-red-500">{customError}</p>
+                <p role="alert" className={`mt-2 text-xs font-semibold ${isDarkMode ? 'text-rose-400' : 'text-rose-600'}`}>{customError}</p>
               )}
             </div>
           )}
@@ -193,6 +203,6 @@ export function CardSetModal({ currentCardSet, isDarkMode, onApply, onClose }: P
           Apply
         </button>
       </div>
-    </div>
+    </Modal>
   );
 }

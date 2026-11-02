@@ -13,6 +13,30 @@ function hexToRgb(hex: string): [number, number, number] {
   ];
 }
 
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+const DARK_TEXT = '#0f172a';
+const LIGHT_TEXT = '#ffffff';
+
+/** Picks white or dark text, whichever contrasts more with the background. */
+export function getReadableTextColor(bgHex: string): string {
+  const bg = relativeLuminance(bgHex);
+  const contrastWithWhite = 1.05 / (bg + 0.05);
+  const contrastWithDark = (bg + 0.05) / (relativeLuminance(DARK_TEXT) + 0.05);
+  return contrastWithWhite >= contrastWithDark ? LIGHT_TEXT : DARK_TEXT;
+}
+
+/** Background + matching text colour for a coloured card or score tile. */
+export function cardStyle(bgHex: string) {
+  return { backgroundColor: bgHex, color: getReadableTextColor(bgHex) };
+}
+
 function interpolateTrafficLight(t: number): string {
   const stops = TRAFFIC_LIGHT_STOPS;
   const segments = stops.length - 1;

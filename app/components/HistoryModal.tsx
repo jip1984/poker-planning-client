@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { CardSet, RoomState } from '@/types';
-import { formatHistoryTimestamp, getCardColor } from '../lib/scoring';
+import { cardStyle, formatHistoryTimestamp, getCardColor } from '../lib/scoring';
+import { Modal } from './Modal';
 
 interface Props {
   room: RoomState;
@@ -11,11 +12,11 @@ interface Props {
 
 export function HistoryModal({ room, cardSet, isDarkMode, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm" onClick={onClose}>
-      <div className={`w-full max-w-2xl rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`} onClick={e => e.stopPropagation()}>
+    <Modal titleId="history-title" onClose={onClose} maxWidth="max-w-2xl">
+      <div className={`w-full max-w-2xl rounded-4xl p-8 shadow-[0_28px_70px_rgba(15,23,42,0.28)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Session History</h3>
+            <h3 id="history-title" className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Session History</h3>
             <p className={`mt-2 text-sm font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               Completed tickets stay here until this room session ends.
             </p>
@@ -41,13 +42,13 @@ export function HistoryModal({ room, cardSet, isDarkMode, onClose }: Props) {
                   <p title={entry.ticket} className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                     {entry.ticket}
                   </p>
-                  <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                  <p className={`mt-1 text-xs font-bold uppercase tracking-[0.14em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                     {formatHistoryTimestamp(entry)}
                   </p>
                 </div>
                 <div
-                  style={{ backgroundColor: getCardColor(entry.score, cardSet.cards) }}
-                  className="flex h-16 w-14 shrink-0 items-center justify-center rounded-[1.35rem] text-2xl font-black text-white shadow-lg"
+                  style={cardStyle(getCardColor(entry.score, cardSet.cards))}
+                  className="flex h-16 w-14 shrink-0 items-center justify-center rounded-[1.35rem] text-2xl font-black shadow-lg"
                 >
                   {entry.score}
                 </div>
@@ -55,11 +56,11 @@ export function HistoryModal({ room, cardSet, isDarkMode, onClose }: Props) {
             ))}
           </div>
         ) : (
-          <div className={`rounded-[1.75rem] px-5 py-10 text-center text-sm font-semibold ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-500' : 'border border-slate-200 bg-slate-50/70 text-slate-500'}`}>
+          <div className={`rounded-[1.75rem] px-5 py-10 text-center text-sm font-semibold ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-400' : 'border border-slate-200 bg-slate-50/70 text-slate-500'}`}>
             No completed tickets yet. Reveal and move to the next ticket to start building session history.
           </div>
         )}
       </div>
-    </div>
+    </Modal>
   );
 }

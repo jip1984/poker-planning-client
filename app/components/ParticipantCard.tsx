@@ -1,6 +1,6 @@
 import { Check, Clock3 } from 'lucide-react';
 import { CardSet, User } from '@/types';
-import { getCardColor } from '../lib/scoring';
+import { cardStyle, getCardColor } from '../lib/scoring';
 
 interface Props {
   user: User;
@@ -16,10 +16,13 @@ export function ParticipantCard({ user, isCurrentUser, isObserverSection, reveal
   const hasVoted = user.vote !== null;
   const showVoteValue = revealed && user.vote !== null;
 
+  // Only your own card is interactive; others render as a plain container.
+  const Tag: React.ElementType = isCurrentUser ? 'button' : 'div';
+  const interactiveProps = isCurrentUser ? { type: 'button' as const, onClick: onOpenProfile } : {};
+
   return (
-    <button
-      type="button"
-      onClick={() => isCurrentUser && onOpenProfile()}
+    <Tag
+      {...interactiveProps}
       className={`flex w-full items-center gap-3 rounded-[1.55rem] px-4 py-3.5 text-left shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950' : 'border border-slate-200 bg-slate-50/70'} ${isCurrentUser ? 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md' : 'cursor-default'}`}
     >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-black uppercase text-blue-600">
@@ -29,14 +32,15 @@ export function ParticipantCard({ user, isCurrentUser, isObserverSection, reveal
       <div className="min-w-0 flex-1 overflow-hidden">
         <p title={user.name} className={`truncate text-lg font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
           {user.name}
+          {isCurrentUser && <span className="sr-only"> (you, edit your profile)</span>}
         </p>
       </div>
 
       <div className="flex shrink-0 items-center justify-end">
         {showVoteValue ? (
           <div
-            style={{ backgroundColor: getCardColor(user.vote!, cardSet.cards) }}
-            className="flex h-14 w-11 items-center justify-center rounded-2xl text-xl font-black text-white shadow-lg"
+            style={cardStyle(getCardColor(user.vote!, cardSet.cards))}
+            className="flex h-14 w-11 items-center justify-center rounded-2xl text-xl font-black shadow-lg"
           >
             {user.vote}
           </div>
@@ -56,6 +60,6 @@ export function ParticipantCard({ user, isCurrentUser, isObserverSection, reveal
           </div>
         )}
       </div>
-    </button>
+    </Tag>
   );
 }

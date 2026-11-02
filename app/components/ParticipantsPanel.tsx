@@ -23,7 +23,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
     <aside className={`w-full p-4 sm:p-6 lg:max-w-90 lg:backdrop-blur ${isDarkMode ? 'border-t border-slate-800 bg-slate-900/80 lg:border-l lg:border-t-0' : 'border-t border-slate-200/80 bg-white/70 lg:border-l lg:border-t-0'}`}>
       <div className="lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pr-1">
         <div className="mb-6 flex items-center justify-between">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+          <p className={`text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
             Participants ({room?.users.length ?? 0})
           </p>
           <button
@@ -42,7 +42,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
               key={section.title}
               className={`rounded-3xl p-4 ${isDarkMode ? 'border border-slate-800/90 bg-slate-900/40' : 'border border-slate-200 bg-slate-50/80'}`}
             >
-              <div className={`mb-3 flex items-center gap-3 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
+              <div className={`mb-3 flex items-center gap-3 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 <p className="text-xs font-black uppercase tracking-[0.18em]">
                   {section.title} ({section.users.length})
                 </p>
@@ -65,7 +65,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
                   ))}
                 </div>
               ) : (
-                <div className={`rounded-[1.35rem] px-4 py-4 text-sm font-medium ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-500' : 'border border-slate-200 bg-slate-50/70 text-slate-400'}`}>
+                <div className={`rounded-[1.35rem] px-4 py-4 text-sm font-medium ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-400' : 'border border-slate-200 bg-slate-50/70 text-slate-500'}`}>
                   No {section.title.toLowerCase()}s yet.
                 </div>
               )}
@@ -73,7 +73,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
           ))}
 
           {!room?.users.length && (
-            <div className={`rounded-[1.75rem] px-5 py-6 text-center text-sm font-semibold shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-500' : 'border border-slate-200 bg-slate-50/70 text-slate-400'}`}>
+            <div className={`rounded-[1.75rem] px-5 py-6 text-center text-sm font-semibold shadow-sm ${isDarkMode ? 'border border-slate-800 bg-slate-950 text-slate-400' : 'border border-slate-200 bg-slate-50/70 text-slate-500'}`}>
               Waiting for people to join...
             </div>
           )}

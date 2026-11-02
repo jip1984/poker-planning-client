@@ -19,7 +19,6 @@ import { ProfileModal } from './components/ProfileModal';
 import { HistoryModal } from './components/HistoryModal';
 import { CardSetModal } from './components/CardSetModal';
 import { AllVotedBanner } from './components/AllVotedBanner';
-import { PokedBanner } from './components/PokedBanner';
 
 type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -52,7 +51,6 @@ function PokerPlanningPage() {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isCardSetModalOpen, setIsCardSetModalOpen] = useState(false);
   const [allVotedAlert, setAllVotedAlert] = useState(false);
-  const [isPoked, setIsPoked] = useState(false);
   const [editName, setEditName] = useState('');
   const [editRole, setEditRole] = useState('');
   const [themePreference, setThemePreference] = useState<ThemePreference>('system');
@@ -110,28 +108,6 @@ function PokerPlanningPage() {
       setProfileError('');
       setIsProfileModalOpen(false);
     });
-    socket.on('poked', () => {
-      setIsPoked(true);
-      try {
-        const ctx = new AudioContext();
-        const t = ctx.currentTime;
-        const chime = (freq: number, start: number, duration: number, vol: number) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, start);
-          gain.gain.setValueAtTime(0, start);
-          gain.gain.linearRampToValueAtTime(vol, start + 0.01);
-          gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
-          osc.start(start);
-          osc.stop(start + duration);
-        };
-        chime(784, t, 0.4, 0.35);
-        chime(1047, t + 0.14, 0.55, 0.3);
-      } catch { /* autoplay blocked */ }
-    });
   }, []);
 
   const createConnectedSocket = useCallback(() => {
@@ -155,7 +131,6 @@ function PokerPlanningPage() {
       socket?.off('profile_update_error');
       socket?.off('profile_update_success');
       socket?.off('all_voted');
-      socket?.off('poked');
       socket?.disconnect();
       socketRef.current = null;
     };
@@ -178,11 +153,6 @@ function PokerPlanningPage() {
   const canVote = Boolean(room?.ticket.trim()) && !room?.revealed;
   const cardSet = room?.cardSet ?? DEFAULT_CARD_SET;
   const canChangeCardSet = me?.role === 'host' && !room?.ticket.trim() && !room?.revealed;
-  const hasIdleVoters = !room?.revealed && participants.some(u => u.vote === null && normalizeJobRole(u.jobRole) !== 'observer');
-
-const onPokeAll = () => {
-    socketRef.current?.emit('poke_all', activeRoomId);
-  };
 
   const toggleTheme = () => {
     setThemePreference((current) => {
@@ -306,10 +276,8 @@ const onPokeAll = () => {
                 onHistory={() => setIsHistoryModalOpen(true)}
                 onCardSet={() => setIsCardSetModalOpen(true)}
                 onToggleAutoReveal={() => socketRef.current?.emit('toggle_auto_reveal', activeRoomId)}
-                onPokeAll={onPokeAll}
                 showCardSet={canChangeCardSet}
                 autoReveal={room?.autoReveal ?? false}
-                hasIdleVoters={hasIdleVoters}
                 isDarkMode={isDarkMode}
               />
               <button
@@ -401,12 +369,6 @@ const onPokeAll = () => {
         />
       )}
 
-      {isPoked && (
-        <PokedBanner
-          isDarkMode={isDarkMode}
-          onDismiss={() => setIsPoked(false)}
-        />
-      )}
     </div>
   );
 }

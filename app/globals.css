@@ -27,3 +27,12 @@ body {
 }
 
 .animate-shake { animation: shake 0.5s ease-in-out; }
+
+/* Visible focus ring for keyboard users only (not on mouse click).
+   In the base layer so a utility class can still override it. */
+@layer base {
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+}

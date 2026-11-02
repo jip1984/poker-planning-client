@@ -1,5 +1,5 @@
 import { CardSet, CardValue, User } from '@/types';
-import { getCardColor } from '../lib/scoring';
+import { cardStyle, getCardColor } from '../lib/scoring';
 
 interface Props {
   myVote: User['vote'];
@@ -25,9 +25,11 @@ export function VotingCards({ myVote, canVote, isDarkMode, cardSet, onVote }: Pr
           <button
             key={val}
             disabled={!canVote}
+            aria-pressed={String(myVote) === String(val)}
+            aria-label={`Vote ${val}`}
             onClick={() => onVote(val)}
-            style={{ backgroundColor: getCardColor(val, cardSet.cards) }}
-            className={`h-36 w-full rounded-2xl text-3xl sm:h-48 sm:rounded-3xl sm:text-4xl font-black text-white shadow-xl transition-all ${canVote ? 'cursor-pointer hover:-translate-y-3' : 'cursor-not-allowed opacity-45'} ${String(myVote) === String(val) ? 'scale-105 ring-10 ring-blue-400/40' : ''}`}
+            style={cardStyle(getCardColor(val, cardSet.cards))}
+            className={`h-36 w-full rounded-2xl text-3xl sm:h-48 sm:rounded-3xl sm:text-4xl font-black shadow-xl transition-all ${canVote ? 'cursor-pointer hover:-translate-y-3' : 'cursor-not-allowed opacity-45'} ${String(myVote) === String(val) ? 'scale-105 ring-10 ring-blue-400/40' : ''}`}
           >
             {val}
           </button>

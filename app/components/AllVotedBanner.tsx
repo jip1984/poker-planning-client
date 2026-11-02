@@ -1,4 +1,5 @@
 import { X, BellRing, Eye } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface Props {
   isDarkMode: boolean;
@@ -8,7 +9,7 @@ interface Props {
 
 export function AllVotedBanner({ isDarkMode, onReveal, onDismiss }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-6 backdrop-blur-sm">
+    <Modal titleId="all-voted-title" onClose={onDismiss} maxWidth="max-w-md">
       <div className={`w-full max-w-md rounded-4xl p-10 text-center shadow-[0_28px_70px_rgba(15,23,42,0.35)] ${isDarkMode ? 'border border-slate-700 bg-slate-900' : 'border border-slate-200 bg-white'}`}>
         <div className="mb-5 flex justify-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600/15 text-blue-500">
@@ -16,7 +17,7 @@ export function AllVotedBanner({ isDarkMode, onReveal, onDismiss }: Props) {
           </div>
         </div>
 
-        <h3 className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+        <h3 id="all-voted-title" className={`text-3xl font-black ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
           All players have voted!
         </h3>
         <p className={`mt-2 text-base font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -39,6 +40,6 @@ export function AllVotedBanner({ isDarkMode, onReveal, onDismiss }: Props) {
           <X size={14} /> Dismiss
         </button>
       </div>
-    </div>
+    </Modal>
   );
 }
