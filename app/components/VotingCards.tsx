@@ -29,7 +29,7 @@ export function VotingCards({ myVote, canVote, isDarkMode, cardSet, onVote }: Pr
             aria-label={`Vote ${val}`}
             onClick={() => onVote(val)}
             style={cardStyle(getCardColor(val, cardSet.cards))}
-            className={`h-36 w-full rounded-2xl text-3xl sm:h-48 sm:rounded-3xl sm:text-4xl font-black shadow-xl transition-all ${canVote ? 'cursor-pointer hover:-translate-y-3' : 'cursor-not-allowed opacity-45'} ${String(myVote) === String(val) ? 'scale-105 ring-10 ring-blue-400/40' : ''}`}
+            className={`h-36 w-full rounded-2xl text-3xl sm:h-48 sm:rounded-3xl sm:text-4xl font-black shadow-xl transition-all ${canVote ? 'cursor-pointer hover:-translate-y-3' : 'cursor-not-allowed saturate-[.35] brightness-110'} ${String(myVote) === String(val) ? 'scale-105 ring-10 ring-blue-400/40' : ''}`}
           >
             {val}
           </button>

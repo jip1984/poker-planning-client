@@ -1,13 +1,15 @@
 import { CardSet } from '@/types';
 
+// Deep enough that white numbers stay readable on every card,
+// including blended shades in between (min 4.1:1 contrast).
 export const TRAFFIC_LIGHT_STOPS = [
-  '#81C784',
-  '#4CAF50',
-  '#FFB74D',
-  '#EF5350',
+  '#388E3C',
+  '#2E7D32',
+  '#B45309',
+  '#C62828',
   '#8C4343',
 ];
-export const QUESTION_MARK_COLOR = '#cbd5e1';
+export const QUESTION_MARK_COLOR = '#64748b';
 
 export const CARD_PRESETS: CardSet[] = [
   {
