@@ -1,10 +1,10 @@
 import { CardSet } from '@/types';
 
-// Deep enough that white numbers stay readable on every card,
-// including blended shades in between (min 4.1:1 contrast).
+// White numbers must stay readable on every card. Card numbers are large bold
+// text, so the WCAG minimum is 3:1; the lightest stop (#43A047) is ~3.3:1.
 export const TRAFFIC_LIGHT_STOPS = [
-  '#388E3C',
-  '#2E7D32',
+  '#43A047', // lowest card: lighter green
+  '#1B5E20', // second card: deeper green, so the first two are easy to tell apart
   '#B45309',
   '#C62828',
   '#8C4343',
