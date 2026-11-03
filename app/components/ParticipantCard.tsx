@@ -27,7 +27,8 @@ const backfaceHidden = { backfaceVisibility: 'hidden', WebkitBackfaceVisibility:
 /** Face-down card once someone votes; flips over to show the value on reveal. */
 function VoteCard({ vote, revealed, revealDelay, cardSet }: { vote: User['vote']; revealed: boolean; revealDelay: number; cardSet: CardSet }) {
   return (
-    <div style={{ perspective: 600 }} className="h-14 w-11">
+    // Compact: sits beside the name without making the row taller. 2-3 digit values still fit.
+    <div style={{ perspective: 600 }} className="h-10 w-8">
       <motion.div
         className="relative h-full w-full"
         style={{ transformStyle: 'preserve-3d' }}
@@ -40,7 +41,7 @@ function VoteCard({ vote, revealed, revealDelay, cardSet }: { vote: User['vote']
         <div
           aria-hidden={!revealed}
           style={{ ...backfaceHidden, ...(revealed && vote !== null ? cardStyle(getCardColor(vote, cardSet.cards)) : {}) }}
-          className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-400 text-xl font-black shadow-lg"
+          className="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-400 text-base font-black shadow-md"
         >
           {revealed ? vote : null}
         </div>
@@ -48,9 +49,9 @@ function VoteCard({ vote, revealed, revealDelay, cardSet }: { vote: User['vote']
         <div
           aria-hidden={revealed}
           style={{ ...backfaceHidden, transform: 'rotateY(180deg)' }}
-          className="absolute inset-0 flex items-center justify-center rounded-2xl border-2 border-white/30 bg-linear-to-br from-blue-500 to-indigo-600 text-white shadow-lg"
+          className="absolute inset-0 flex items-center justify-center rounded-xl border border-white/30 bg-linear-to-br from-blue-500 to-indigo-600 text-white shadow-md"
         >
-          <Check size={18} strokeWidth={3} aria-hidden="true" />
+          <Check size={14} strokeWidth={3} aria-hidden="true" />
           <span className="sr-only">Voted</span>
         </div>
       </motion.div>
@@ -83,7 +84,7 @@ export function ParticipantCard({ user, isCurrentUser, isObserverSection, reveal
       </div>
 
       {/* Fixed height so swapping badge <-> card doesn't make the row jump. */}
-      <div className="flex h-14 shrink-0 items-center justify-end">
+      <div className="flex h-10 shrink-0 items-center justify-end">
         <AnimatePresence mode="popLayout" initial={false}>
           {status === 'voted' ? (
             <motion.div key="voted" {...badgeMotion}>
