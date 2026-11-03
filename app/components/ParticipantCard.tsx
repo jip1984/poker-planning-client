@@ -1,4 +1,5 @@
-import { Check, Clock3 } from 'lucide-react';
+import { Check, Clock3, Eye } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { CardSet, User } from '@/types';
 import { cardStyle, getCardColor } from '../lib/scoring';
 
@@ -9,12 +10,57 @@ interface Props {
   revealed: boolean;
   isDarkMode: boolean;
   cardSet: CardSet;
+  /** Seconds to wait before this card flips, so the room flips one by one. */
+  revealDelay?: number;
   onOpenProfile: () => void;
 }
 
-export function ParticipantCard({ user, isCurrentUser, isObserverSection, revealed, isDarkMode, cardSet, onOpenProfile }: Props) {
+// Status badges swap in and out; exits are quicker than entries.
+const badgeMotion = {
+  initial: { opacity: 0, scale: 0.85 },
+  animate: { opacity: 1, scale: 1, transition: { type: 'spring', duration: 0.3, bounce: 0.3 } },
+  exit: { opacity: 0, scale: 0.85, transition: { duration: 0.15, ease: 'easeIn' } },
+} as const;
+
+const backfaceHidden = { backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as const;
+
+/** Face-down card once someone votes; flips over to show the value on reveal. */
+function VoteCard({ vote, revealed, revealDelay, cardSet }: { vote: User['vote']; revealed: boolean; revealDelay: number; cardSet: CardSet }) {
+  return (
+    <div style={{ perspective: 600 }} className="h-14 w-11">
+      <motion.div
+        className="relative h-full w-full"
+        style={{ transformStyle: 'preserve-3d' }}
+        initial={false}
+        animate={{ rotateY: revealed ? 0 : 180 }}
+        transition={{ type: 'spring', duration: 0.6, bounce: 0.25, delay: revealed ? revealDelay : 0 }}
+      >
+        {/* Front: the value. Colour and number are only set after reveal so the
+            hidden face never gives the vote away. */}
+        <div
+          aria-hidden={!revealed}
+          style={{ ...backfaceHidden, ...(revealed && vote !== null ? cardStyle(getCardColor(vote, cardSet.cards)) : {}) }}
+          className="absolute inset-0 flex items-center justify-center rounded-2xl bg-slate-400 text-xl font-black shadow-lg"
+        >
+          {revealed ? vote : null}
+        </div>
+        {/* Back: shown while votes are hidden. */}
+        <div
+          aria-hidden={revealed}
+          style={{ ...backfaceHidden, transform: 'rotateY(180deg)' }}
+          className="absolute inset-0 flex items-center justify-center rounded-2xl border-2 border-white/30 bg-linear-to-br from-blue-500 to-indigo-600 text-white shadow-lg"
+        >
+          <Check size={18} strokeWidth={3} aria-hidden="true" />
+          <span className="sr-only">Voted</span>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+export function ParticipantCard({ user, isCurrentUser, isObserverSection, revealed, isDarkMode, cardSet, revealDelay = 0, onOpenProfile }: Props) {
   const hasVoted = user.vote !== null;
-  const showVoteValue = revealed && user.vote !== null;
+  const status = isObserverSection ? 'observing' : hasVoted ? 'voted' : 'waiting';
 
   // Only your own card is interactive; others render as a plain container.
   const Tag: React.ElementType = isCurrentUser ? 'button' : 'div';
@@ -36,29 +82,25 @@ export function ParticipantCard({ user, isCurrentUser, isObserverSection, reveal
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center justify-end">
-        {showVoteValue ? (
-          <div
-            style={cardStyle(getCardColor(user.vote!, cardSet.cards))}
-            className="flex h-14 w-11 items-center justify-center rounded-2xl text-xl font-black shadow-lg"
-          >
-            {user.vote}
-          </div>
-        ) : hasVoted ? (
-          <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-600">
-            <Check size={14} strokeWidth={3} />
-            Voted
-          </div>
-        ) : isObserverSection ? (
-          <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
-            Optional
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-xs font-black text-amber-600">
-            <Clock3 size={14} strokeWidth={2.5} />
-            Waiting
-          </div>
-        )}
+      {/* Fixed height so swapping badge <-> card doesn't make the row jump. */}
+      <div className="flex h-14 shrink-0 items-center justify-end">
+        <AnimatePresence mode="popLayout" initial={false}>
+          {status === 'voted' ? (
+            <motion.div key="voted" {...badgeMotion}>
+              <VoteCard vote={user.vote} revealed={revealed} revealDelay={revealDelay} cardSet={cardSet} />
+            </motion.div>
+          ) : status === 'observing' ? (
+            <motion.div key="observing" {...badgeMotion} className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-black text-slate-600">
+              <Eye size={14} strokeWidth={2.5} />
+              Watching
+            </motion.div>
+          ) : (
+            <motion.div key="waiting" {...badgeMotion} className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-2 text-xs font-black text-amber-600">
+              <Clock3 size={14} strokeWidth={2.5} />
+              Waiting
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </Tag>
   );

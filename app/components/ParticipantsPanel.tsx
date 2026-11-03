@@ -1,6 +1,7 @@
 import { Moon, Sun } from 'lucide-react';
-import { CardSet, RoomState, User } from '@/types';
+import { RoomState, User } from '@/types';
 import { ParticipantCard } from './ParticipantCard';
+import { flipDelay } from '../lib/motion';
 
 interface ParticipantSection {
   title: string;
@@ -18,6 +19,14 @@ interface Props {
 
 export function ParticipantsPanel({ room, me, participantSections, isDarkMode, onToggleTheme, onOpenProfile }: Props) {
   const cardSet = room?.cardSet;
+
+  // Flip order: top to bottom through the sidebar, voters only.
+  const flipOrder = new Map(
+    participantSections
+      .flatMap((section) => section.users)
+      .filter((user) => user.vote !== null)
+      .map((user, index) => [user.id, flipDelay(index)]),
+  );
 
   return (
     <aside className={`w-full p-4 sm:p-6 lg:max-w-90 lg:backdrop-blur ${isDarkMode ? 'border-t border-slate-800 bg-slate-900/80 lg:border-l lg:border-t-0' : 'border-t border-slate-200/80 bg-white/70 lg:border-l lg:border-t-0'}`}>
@@ -60,6 +69,7 @@ export function ParticipantsPanel({ room, me, participantSections, isDarkMode, o
                       revealed={room?.revealed ?? false}
                       isDarkMode={isDarkMode}
                       cardSet={cardSet!}
+                      revealDelay={flipOrder.get(user.id) ?? 0}
                       onOpenProfile={() => onOpenProfile(user)}
                     />
                   ))}

@@ -25,6 +25,7 @@ export const TicketDisplay = ({ ticket, isHost, onUpdate, error = '', isDarkMode
             className={`w-full bg-transparent px-4 sm:px-6 text-xl sm:text-[2rem] font-black text-center outline-none ${isDarkMode ? 'text-white placeholder:text-slate-500' : 'text-black placeholder:text-slate-500'}`}
             placeholder="Type or paste JIRA title..."
             value={ticket}
+            maxLength={200}
             onChange={(e) => onUpdate(e.target.value)}
           />
         </div>

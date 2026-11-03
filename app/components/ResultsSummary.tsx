@@ -1,66 +1,26 @@
 import { CardSet, RoomState } from '@/types';
 import { calculateAvg, calculateRoleAverage, cardStyle, getScoreColor } from '../lib/scoring';
+import { resultsDelay } from '../lib/motion';
+import { FlipIn, RiseIn } from './FlipIn';
+
+const ROLE_STAGGER_S = 0.06;
 
 interface Props {
   room: RoomState;
   cardSet: CardSet;
-  isHost: boolean;
   isDarkMode: boolean;
 }
 
-function RevealedResults({ room, cardSet, isDarkMode }: { room: RoomState; cardSet: CardSet; isDarkMode: boolean }) {
+/** Revealed results: the same layout for host and voters. */
+export function ResultsSummary({ room, cardSet, isDarkMode }: Props) {
   const overall = calculateAvg(room);
   const roleItems = [
     { label: 'Developer Average', value: calculateRoleAverage(room, 'Developer') },
     { label: 'Test Average', value: calculateRoleAverage(room, 'Test') },
-    { label: 'Observer Average', value: calculateRoleAverage(room, 'Observer') },
+    // No observer row: observers don't vote.
   ];
-
-  return (
-    <div className="mt-8 flex flex-col items-center gap-8">
-      <div className="flex flex-col items-center">
-        <p className={`mb-5 text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-          Overall Average
-        </p>
-        <div
-          style={cardStyle(getScoreColor(overall, cardSet))}
-          className="flex h-44 w-32 sm:h-56 sm:w-40 items-center justify-center rounded-4xl text-5xl sm:text-6xl font-black shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
-        >
-          {overall}
-        </div>
-      </div>
-
-      <div className="mx-auto grid w-full max-w-xl gap-4 grid-cols-3">
-        {roleItems.map((item) => (
-          <div
-            key={item.label}
-            className={`rounded-[1.45rem] px-5 py-5 ${isDarkMode ? 'border border-slate-800 bg-slate-900/70' : 'border border-slate-200 bg-white/90'}`}
-          >
-            <p className={`min-h-8 text-center text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-              {item.label}
-            </p>
-            <div className="mt-3 flex items-center justify-center gap-2">
-              <div
-                style={cardStyle(getScoreColor(item.value, cardSet))}
-                className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl text-3xl font-black shadow-lg"
-              >
-                {item.value}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function HostResults({ room, cardSet, isDarkMode }: { room: RoomState; cardSet: CardSet; isDarkMode: boolean }) {
-  const overall = calculateAvg(room);
-  const roleItems = [
-    { label: 'Developer Average', value: calculateRoleAverage(room, 'Developer') },
-    { label: 'Test Average', value: calculateRoleAverage(room, 'Test') },
-    { label: 'Observer Average', value: calculateRoleAverage(room, 'Observer') },
-  ];
+  // Wait for the sidebar cards to flip first.
+  const delay = resultsDelay(room.users.filter((u) => u.vote !== null).length);
 
   return (
     <div className="mt-6 flex flex-col sm:flex-row items-center sm:items-stretch justify-center gap-6 w-full max-w-2xl mx-auto">
@@ -68,18 +28,21 @@ function HostResults({ room, cardSet, isDarkMode }: { room: RoomState; cardSet: 
         <p className={`text-sm font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
           Overall Average
         </p>
-        <div
-          style={cardStyle(getScoreColor(overall, cardSet))}
-          className="flex h-44 w-32 items-center justify-center rounded-4xl text-5xl font-black shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
-        >
-          {overall}
-        </div>
+        <FlipIn delay={delay}>
+          <div
+            style={cardStyle(getScoreColor(overall, cardSet))}
+            className="flex h-44 w-32 items-center justify-center rounded-4xl text-5xl font-black shadow-[0_24px_50px_rgba(15,23,42,0.22)]"
+          >
+            {overall}
+          </div>
+        </FlipIn>
       </div>
 
       <div className="flex flex-col gap-3 flex-1">
-        {roleItems.map((item) => (
-          <div
+        {roleItems.map((item, i) => (
+          <RiseIn
             key={item.label}
+            delay={delay + 0.15 + i * ROLE_STAGGER_S}
             className={`flex flex-1 items-center gap-4 rounded-[1.45rem] px-5 py-3 ${isDarkMode ? 'border border-slate-800 bg-slate-900/70' : 'border border-slate-200 bg-white/90'}`}
           >
             <div
@@ -91,14 +54,9 @@ function HostResults({ room, cardSet, isDarkMode }: { room: RoomState; cardSet: 
             <p className={`text-xs font-black uppercase tracking-[0.18em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
               {item.label}
             </p>
-          </div>
+          </RiseIn>
         ))}
       </div>
     </div>
   );
-}
-
-export function ResultsSummary({ room, cardSet, isHost, isDarkMode }: Props) {
-  if (isHost) return <HostResults room={room} cardSet={cardSet} isDarkMode={isDarkMode} />;
-  return <RevealedResults room={room} cardSet={cardSet} isDarkMode={isDarkMode} />;
 }

@@ -1,8 +1,9 @@
 "use client";
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Eye } from 'lucide-react';
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
+import { MotionConfig } from 'motion/react';
 import { CardSet, RoomState, User } from '@/types';
 import { DEFAULT_CARD_SET, SOCKET_URL, THEME_STORAGE_KEY } from './lib/constants';
 import { normalizeJobRole } from './lib/scoring';
@@ -22,6 +23,24 @@ import { AllVotedBanner } from './components/AllVotedBanner';
 
 type ThemePreference = 'light' | 'dark' | 'system';
 
+type JoinInfo = { roomId: string; userName: string; role: 'host' | 'voter'; jobRole: string };
+
+const CLIENT_ID_STORAGE_KEY = 'planning-poker-client-id';
+
+// One id per browser tab (sessionStorage survives refresh). The server uses it
+// to recognise a user coming back on a new socket after a reconnect.
+function getClientId() {
+  try {
+    const stored = window.sessionStorage.getItem(CLIENT_ID_STORAGE_KEY);
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    window.sessionStorage.setItem(CLIENT_ID_STORAGE_KEY, id);
+    return id;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
 export default function App() {
   return (
     <Suspense fallback={null}>
@@ -34,6 +53,9 @@ function PokerPlanningPage() {
   const searchParams = useSearchParams();
   const socketRef = useRef<Socket | null>(null);
   const activeRoomIdRef = useRef('');
+  // What we last joined with, so we can rejoin after a reconnect.
+  const joinInfoRef = useRef<JoinInfo | null>(null);
+  const clientIdRef = useRef('');
   const roomIdFromUrl = searchParams.get('room')?.trim().toLowerCase() ?? '';
   const isInviteJoin = roomIdFromUrl.length > 0;
 
@@ -91,17 +113,34 @@ function PokerPlanningPage() {
   }, [themePreference]);
 
   const attachSocketListeners = useCallback((socket: Socket) => {
-    socket.on('connect', () => setSocketId(socket.id ?? ''));
+    socket.on('connect', () => {
+      setSocketId(socket.id ?? '');
+      // Reconnected after a drop: take our seat back.
+      const joinInfo = joinInfoRef.current;
+      if (joinInfo) socket.emit('join_room', { ...joinInfo, clientId: clientIdRef.current });
+    });
     socket.on('disconnect', () => setSocketId(''));
-    socket.on('update_state', (nextRoom) => {
+    socket.on('update_state', (nextRoom: RoomState) => {
       setRoom(nextRoom);
+      // Keep rejoin details in step with profile edits.
+      const self = nextRoom.users.find((u) => u.id === socket.id);
+      if (self && joinInfoRef.current) {
+        joinInfoRef.current = { ...joinInfoRef.current, userName: self.name, jobRole: self.jobRole };
+      }
       setJoinError('');
       setTicketError('');
       setJoined(true);
       if (nextRoom.revealed) setAllVotedAlert(false);
     });
     socket.on('all_voted', () => setAllVotedAlert(true));
-    socket.on('join_error', (message: string) => setJoinError(message));
+    socket.on('join_error', (message: string) => {
+      // Also covers a rejected rejoin (e.g. the room is gone after a server
+      // restart): drop back to the join screen so the message is visible.
+      joinInfoRef.current = null;
+      setRoom(null);
+      setJoined(false);
+      setJoinError(message);
+    });
     socket.on('ticket_update_error', (message: string) => setTicketError(message));
     socket.on('profile_update_error', (message: string) => setProfileError(message));
     socket.on('profile_update_success', () => {
@@ -118,6 +157,7 @@ function PokerPlanningPage() {
   }, [attachSocketListeners]);
 
   useEffect(() => {
+    clientIdRef.current = getClientId();
     createConnectedSocket();
     return () => {
       const socket = socketRef.current;
@@ -150,6 +190,7 @@ function PokerPlanningPage() {
     { title: 'Test', users: participants.filter((u) => normalizeJobRole(u.jobRole) === 'test') },
     { title: 'Observer', users: participants.filter((u) => normalizeJobRole(u.jobRole) === 'observer') },
   ];
+  const isObserver = normalizeJobRole(me?.jobRole ?? '') === 'observer';
   const canVote = Boolean(room?.ticket.trim()) && !room?.revealed;
   const cardSet = room?.cardSet ?? DEFAULT_CARD_SET;
   const canChangeCardSet = me?.role === 'host' && !room?.ticket.trim() && !room?.revealed;
@@ -200,7 +241,9 @@ function PokerPlanningPage() {
     if (typeof window !== 'undefined') {
       window.history.replaceState({}, '', `${window.location.pathname}?room=${nextRoomId}`);
     }
-    socket.emit('join_room', { roomId: nextRoomId, userName: capitalize(userName), role, jobRole: capitalize(jobRole) });
+    const joinInfo: JoinInfo = { roomId: nextRoomId, userName: capitalize(userName), role, jobRole: capitalize(jobRole) };
+    joinInfoRef.current = joinInfo;
+    socket.emit('join_room', { ...joinInfo, clientId: clientIdRef.current });
   };
 
   const handleEnterRoom = () => {
@@ -234,6 +277,8 @@ function PokerPlanningPage() {
   );
 
   return (
+    // reducedMotion="user": skip transform animations for users who ask the OS for less motion.
+    <MotionConfig reducedMotion="user">
     <div className={`flex min-h-screen flex-col lg:flex-row font-sans ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-50'}`}>
       <main className="flex flex-1 flex-col items-center px-4 py-4 sm:px-8 sm:py-5 lg:px-12 lg:py-6">
         <header className="mb-3 sm:mb-5 w-full max-w-5xl space-y-3">
@@ -301,7 +346,14 @@ function PokerPlanningPage() {
           isDarkMode={isDarkMode}
         />
 
-        {me?.role === 'voter' && !room?.revealed && (
+        {me?.role === 'voter' && isObserver && !room?.revealed && (
+          <p className={`mt-6 flex items-center gap-2 text-base sm:text-lg font-black tracking-[0.08em] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+            <Eye size={20} aria-hidden="true" />
+            You&apos;re observing. Results appear when the host reveals.
+          </p>
+        )}
+
+        {me?.role === 'voter' && !isObserver && !room?.revealed && (
           <VotingCards
             myVote={me.vote}
             canVote={canVote}
@@ -312,7 +364,7 @@ function PokerPlanningPage() {
         )}
 
         {room?.revealed && (
-          <ResultsSummary room={room} cardSet={cardSet} isHost={me?.role === 'host'} isDarkMode={isDarkMode} />
+          <ResultsSummary room={room} cardSet={cardSet} isDarkMode={isDarkMode} />
         )}
       </main>
 
@@ -360,6 +412,15 @@ function PokerPlanningPage() {
         />
       )}
 
+      {!socketId && (
+        <div
+          role="status"
+          className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-lg"
+        >
+          Connection lost. Reconnecting…
+        </div>
+      )}
+
       {isCardSetModalOpen && me?.role === 'host' && (
         <CardSetModal
           currentCardSet={cardSet}
@@ -370,5 +431,6 @@ function PokerPlanningPage() {
       )}
 
     </div>
+    </MotionConfig>
   );
 }
